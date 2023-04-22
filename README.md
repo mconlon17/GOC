@@ -27,7 +27,7 @@ The GOC plans to implement
 1. Education.  One record per "education" -- start/end with a specific education program.  Education providers in contacts.
 1. Group Event.  One record per event -- date/time/locsation/duration.  With associated members and staff.
 
-## Reports and their cycles
+## Reports
 
 ### Daily
 
@@ -62,21 +62,23 @@ The GOC plans to implement
 * Member missing data report -- shows missing data for Members for remediation
 
 
-## Notes
-1. We don't recommend yearly reports -- everything should be checked and reported more frequently than yearly.  So while
-a final report may only be needed yearly, intermediate reports should be run to anticipate the yearly version.
-1. We don't recommend adhoc reports -- everything should be on a schedule so that reports are not overlooked.
+## Utility programs
 
-## To Do
+* Flourish Connection -- tests the Flourish connection showing status, and columns in tables GOC uses for reporting
+* Flourish Get -- basic getter type functions for returning data from a Flourish database and making it available to R
 
-1. Modify reports as needed for operational use at the GOC.  Columns will be added or removed, wording improved to meet operational needs.
+## To Do (software only)
+
+1. Synch Members and Contacts
+1. Implement R Server batch jobs on Flourish Community instance to speed up the dashboard:
+    1. Precalculate common data requests -- active members, staff
+1. Implement keychain on R Server
+1. Implement data caching in dashboard to improve response time
+1. Move dashboard from commercial hostying to Form Communities hosting
 1. Add reports as need for operational use at the GOC.  Some anticipated reports are:
     1. ARPA billing report -- when requirements are developed
     1. Wellness billing report -- when event attendance is implemented
     1. Education tracking report -- when education tracking is implemented
     1. Transportation tracking report -- when transportation logging is implemented
+    1. Download mailing lists for use in MailChimp
 
-## Utility programs
-
-* Flourish Connection -- tests the Flourish connection showing status, and columns in tables GOC uses for reporting
-* Flourish Get -- basic getter type functions for returning data from a Flourish databse and making it available to R
