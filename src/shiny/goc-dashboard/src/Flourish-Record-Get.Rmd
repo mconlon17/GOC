@@ -1,0 +1,214 @@
+---
+title: Get Flourish Records
+subtitle: For debugging and tabulating, cleaning and reporting
+output:
+  html_document:
+    css: "../styles/styles.css"
+---
+
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+Each table we are using in Flourish has a corresponding "get" function, to get records from Flourish.  We use these functions to encapsulate database connections and disconnects, as well as to simplify access of only non-deleted records (the default) and to permit the getting of all records (use include.deleted=TRUE)
+
+Each of the get functions uses two lower level functions -- flourish.connection, and get.table.  get.table calls flourish.connection and dbDisconnect. get.table can be used to get any table from Flourish.
+
+RMySQL is a required library for these functions.
+
+```{r flourish}
+flourish.connection <- function() {
+  dbConnect(RMySQL::MySQL(),
+    dbname = key_get("Flourish GOC production dbname"),
+    host = key_get("Flourish GOC production host"),
+    port = 3306,
+    user = key_get("Flourish GOC production user"),
+    password = key_get("Flourish GOC production password")
+  )
+}
+
+get.table <- function(table.name, include.deleted = FALSE) {
+  # include.deleted -- TRUE, deleted records are included in the results, otherwise filtered
+
+  con <- flourish.connection()
+
+  table <- dbGetQuery(con, paste0("SELECT * FROM ", table.name))
+
+  if (!include.deleted) {
+    table <- table %>% filter(!deleted)
+  }
+
+  dbDisconnect(con)
+  table
+}
+
+get.users <- function(include.deleted = FALSE) {
+  get.table("users", include.deleted)
+}
+
+users <-get.users()
+
+ft <- goc.table(users)
+ft
+
+get.members <- function(include.deleted = FALSE, active.only = FALSE) {
+  members <- get.table("contacts", include.deleted)
+
+  if (active.only) {
+    recent.members <- members %>%
+      filter(flo_deceased_c != "Yes") %>%
+      filter(flo_membership_status_c != "On_leave") %>%
+      inner_join(get.attendance(), by = c("contact_id_c" = "contact_2_id")) %>% # Inner join must be a Member with attendance
+      mutate(Since = Sys.Date() - as_date(da_date_of_attendance)) %>%
+      rename(id = id.x) %>%
+      group_by(id) %>%
+      summarise(MostRecent = min(Since)) %>%
+      filter(MostRecent <= 90) %>%
+      select(id)
+    members <- members %>%
+      inner_join(recent.members, by = c("id" = "id"))
+  }
+  members
+}
+
+# tab <- get.members() %>%
+#     group_by(flo_membership_status_c) %>%
+#     tally()
+# 
+# ft <- goc.table(tab)
+# ft
+# 
+# members <- get.members(active.only=T) %>%
+#   select(first_name, last_name, flo_membership_status_c)
+# 
+# nrow(members)
+# 
+# ft <- goc.table(members,"Members")
+# ft
+
+get.attendance <- function(include.deleted = FALSE) {
+  get.table("sa_flourish_daily_attendance", include.deleted)
+}
+
+# attendance <- get.attendance()
+#
+# ft <- goc.table(tail(attendance), "Attendance")
+# ft
+
+get.outreach <- function(include.deleted = FALSE) {
+  get.table("sa_flourish_reach_out", include.deleted)
+}
+
+# outreach <- get.outreach()
+#
+# ft <- goc.table(tail(outreach), "Outreach")
+# ft
+
+get.goals <- function(include.deleted = FALSE) {
+  get.table("sa_goals", include.deleted)
+}
+
+# goals <- get.goals() %>%
+#   group_by(flo_goal_type) %>%
+#   tally()
+# 
+# ft <- goc.table(goals)
+# ft
+
+
+# goals <- get.goals()
+#
+# ft <- goc.table(goals, "Goals")
+# ft
+
+get.supports <- function(include.deleted = FALSE, with.members=FALSE) {
+  
+  supports <- get.table("flo_supports", include.deleted)
+  
+  if (with.members) {
+    
+    rel <- get.table("flo_supports_contacts_c")
+    
+    members <- get.members(include.deleted)
+    
+    supports <- supports %>%
+      inner_join(rel, by = c("id"="flo_supports_contactsflo_supports_ida")) %>%
+      inner_join(members, by=c("flo_supports_contactscontacts_idb"="id"))
+  }
+  
+  supports
+}
+
+# supports <- get.supports(with.members=T) %>%
+#   arrange(desc(flo_support_date))
+# 
+# nrow(supports)
+# ft <- goc.table(head(supports,n=100), "Supports")
+# ft
+
+get.progress.notes <- function(include.deleted = FALSE) {
+  get.table("flo_progress_notes", include.deleted)
+}
+
+# progress.notes <- get.progress.notes()
+#
+# ft <- goc.table(progress.notes, "Progress Notes")
+# ft
+
+get.contacts <- function(include.deleted = FALSE, include.email = T) {
+  
+  contacts <- get.table("sa_contacts_2", include.deleted)
+  
+  if (include.email) {
+    email.addr.bean.rel <- get.table("email_addr_bean_rel") %>% filter(primary_address == 1)
+
+    if (!include.deleted) {
+      email.addr.bean.rel <- email.addr.bean.rel %>% filter(!deleted)
+    }
+
+    email.addr.bean.rel %>% select(bean_id, email_address_id)
+
+    email.addresses <- get.table("email_addresses")
+
+    if (!include.deleted) {
+      email.addresses <- email.addresses %>% filter(!deleted)
+    }
+
+    email.addresses <- email.addresses %>% select(id, email_address)
+
+    contacts <- contacts %>%
+      left_join(email.addr.bean.rel, by = c("id" = "bean_id")) %>%
+      left_join(email.addresses, by = c("email_address_id" = "id")) %>%
+      rename(date_modified = date_modified.x, deleted = deleted.x) %>%
+      select(
+        -id.y, -email_address_id, -bean_module, -primary_address,
+        -reply_to_address, -date_modified.y, -deleted.y, -date_created
+      )
+  }
+  
+  contacts
+}
+
+# contacts <- get.contacts(include.email=F)
+# nrow(contacts)
+# 
+# ft <- goc.table(contacts,"Contacts")
+# ft
+
+get.gifts <- function(include.deleted = FALSE) {
+  get.table("flo_gifts", include.deleted)
+}
+
+# gifts <- get.gifts()
+#
+# ft <- goc.table(gifts,"Gifts")
+# ft
+
+get.employment <- function(include.deleted = FALSE) {
+  get.table("sa_employment", include.deleted)
+}
+
+# employment <- get.employment()
+#
+# ft <- goc.table(employment,"Gifts")
+# ft
+```

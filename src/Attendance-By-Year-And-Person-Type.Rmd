@@ -1,0 +1,13 @@
+---
+title: "Attendance by Year and Person Type"
+output:
+  html_document:
+      css: "../styles/styles.css"
+---
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+
+```{r attendance}
+plot.attendance.by.year.and.person.type()
+```

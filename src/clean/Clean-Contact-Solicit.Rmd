@@ -1,0 +1,42 @@
+---
+title: "Clean Contact Solicit"
+output:
+  html_document:
+    css: "../../styles/styles.css"
+---
+```{r setup,echo=F,message=F,warning=F}
+source("../setup.R")
+```
+Set all contacts to solicit.  We will hand edit those we do not wish to solicit.
+```{r flourish}
+
+solicit <- get.contacts() %>%
+  mutate(do_not_call = 1, date_modified = now(), modified_user_id = "4cde6014-5735-b6a8-2975-63e1844134be") %>%
+  select(id, do_not_call, date_modified, modified_user_id)
+
+ft <- goc.table(head(solicit), "Solicit is stored in do_not_call. 1=yes, 0=np, do not solicit")
+ft
+```
+``` {r do-update}
+# Make a database connection to Flourish
+
+con <- flourish.connection()
+
+# Allow Tables to be loaded from R
+
+dbSendQuery(con, "SET GLOBAL local_infile = true;")
+
+# Create temporary table
+
+dbWriteTable(con, value = solicit, name = 'temp_solicit', append = F, row.names = F)
+
+dbSendQuery(con, 'UPDATE sa_contacts_2
+                     INNER JOIN temp_solicit ON
+                         sa_contacts_2.id = temp_solicit.id
+                     SET sa_contacts_2.date_modified = temp_solicit.date_modified,
+                         sa_contacts_2.modified_user_id = temp_solicit.modified_user_id,
+                         sa_contacts_2.do_not_call = temp_solicit.do_not_call;')
+
+dbSendQuery(con, 'DROP TABLE temp_solicit;')
+dbDisconnect(con)
+```

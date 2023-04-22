@@ -1,0 +1,45 @@
+---
+title: Check Outreach Records
+output:
+    html_document:
+        css: "../styles/styles.css"
+params:
+  date: !r Sys.Date()
+---
+```{r setup,echo=FALSE,message=FALSE,warning=FALSE}
+source("setup.R")
+```
+
+```{r check-attendance}
+outreach <- get.outreach()
+
+tab <- outreach %>%
+  filter(is.na(contact_id) | contact_id == "") %>%
+  select(name, ro_date_of_reach_out) %>%
+  arrange(desc(ro_date_of_reach_out))
+
+ft <- goc.table(tab, paste0(nrow(tab), " Outreach records without member"))
+ft
+
+tab <- outreach %>%
+  filter(is.na(ro_date_of_reach_out) | ro_date_of_reach_out == "") %>%
+  select(name, )
+
+ft <- goc.table(tab, paste0(nrow(tab), " Outreach records without date"))
+ft
+
+tab <- outreach %>%
+  group_by(ro_type_of_reachout) %>%
+  tally()
+
+ft <- goc.table(tab, "Outreach Type")
+ft
+
+tab <- outreach %>%
+  group_by(ro_outcome_of_ro) %>%
+  tally()
+
+ft <- goc.table(tab, "Outreach Outcome")
+ft
+
+```

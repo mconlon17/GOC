@@ -1,0 +1,496 @@
+---
+title: "Flourish Fields"
+output:
+  html_document:
+    css : "../styles/styles.css"
+---
+
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+# Contacts
+```{r contact_fields}
+contacts <- get.contacts() %>%
+  mutate(across(where(is.numeric), ~ ifelse(is.na(.), 0, 1))) %>%
+  mutate(across(where(is.character), ~ ifelse(. == "" | . == "NA" | is.na(.), 0, 1))) %>%
+  summarise(across(everything(), sum))
+contact_fields <- as.data.frame(t(contacts)) %>%
+  mutate(field_name = rownames(t(contacts)), auto = "", action = "", notes = "") %>%
+  rename(non_blank = V1) %>%
+  select(field_name, non_blank, auto, action, notes)
+
+rownames(contact_fields) <- NULL
+contact_fields[contact_fields$field_name == "id", seq(3, 5)] <- c("yes","","UUID of the contact record")
+contact_fields[contact_fields$field_name == "date_entered", seq(3, 5)] <- c("yes","","Date record was created")
+contact_fields[contact_fields$field_name == "date_modified", seq(3, 5)] <- c("yes","","Date record was last edited")
+contact_fields[contact_fields$field_name == "modified_user_id", seq(3, 5)] <- c("yes","","UUID of user who last edited the record")
+contact_fields[contact_fields$field_name == "created_by", seq(3, 5)] <- c("yes","","UUID of user who created the record")
+contact_fields[contact_fields$field_name == "description", seq(3, 5)] <- c("unused","Unused","Unused")
+contact_fields[contact_fields$field_name == "deleted", seq(3, 5)] <- c("yes","","1=deleted; 0 = not deleted")
+contact_fields[contact_fields$field_name == "assigned_user_id", seq(3, 5)] <- c("no","","UUID of user/member owner of the record")
+contact_fields[contact_fields$field_name == "salutation", seq(3, 5)] <- c("no","","Prefix, e.g. Dr., Mrs., Ms.")
+contact_fields[contact_fields$field_name == "first_name", seq(3, 5)] <- c("no","","Legal first name")
+contact_fields[contact_fields$field_name == "last_name", seq(3, 5)] <- c("no","","Legal last name.  No suffix")
+contact_fields[contact_fields$field_name == "photo", seq(3, 5)] <- c("no","","File or URL?")
+contact_fields[contact_fields$field_name == "do_not_call", seq(3, 5)] <- c("no","","1 for Solicit, 0 for do not solicit")
+contact_fields[contact_fields$field_name == "phone_home", seq(3, 5)] <- c("no","","Home phone")
+contact_fields[contact_fields$field_name == "phone_mobile", seq(3, 5)] <- c("no","","Mobile phone")
+contact_fields[contact_fields$field_name == "phone_work", seq(3, 5)] <- c("no","","Work Phone")
+contact_fields[contact_fields$field_name == "phone_other", seq(3, 5)] <- c("no","","Other Phone")
+contact_fields[contact_fields$field_name == "primary_address_street", seq(3, 5)] <- c("no","","Street Address")
+contact_fields[contact_fields$field_name == "primary_address_city", seq(3, 5)] <- c("no","","City")
+contact_fields[contact_fields$field_name == "primary_address_state", seq(3, 5)] <- c("no","","State")
+contact_fields[contact_fields$field_name == "primary_address_postalcode", seq(3, 5)] <- c("no","","Zip Code")
+contact_fields[contact_fields$field_name == "primary_address_country", seq(3, 5)] <- c("no","","County")
+contact_fields[contact_fields$field_name == "c2_groups", seq(3, 5)] <- c("no", "",
+  "Groups contacts belong to. e.g. Member, Rotary, Staff"
+)
+contact_fields[contact_fields$field_name == "c2_address_street", seq(3, 5)] <- c("unused","Unused","Unused")
+contact_fields[contact_fields$field_name == "c2_address_street_2", seq(3, 5)] <- c("unused","Unused","Unused")
+contact_fields[contact_fields$field_name == "c2_address_street_3", seq(3, 5)] <- c("unused","Unused","Unused")
+contact_fields[contact_fields$field_name == "c2_address_city", seq(3, 5)] <- c("unused","Unused","Unused")
+contact_fields[contact_fields$field_name == "c2_address_state", seq(3, 5)] <- c("unused","Unused","Unused")
+contact_fields[contact_fields$field_name == "c2_address_postalcode", seq(3, 5)] <- c("unused","Unused","Unused")
+contact_fields[contact_fields$field_name == "c2_address_country", seq(3, 5)] <- c("unused","Unused","Unused")
+contact_fields[contact_fields$field_name == "c2_primary_phone", seq(3, 5)] <- c("no","","The phone we call first")
+contact_fields[contact_fields$field_name == "c2_secondary_phone", seq(3, 5)] <- c("no","","The phone we call second")
+contact_fields[contact_fields$field_name == "c2_contact_record_type_c", seq(3, 5)] <- c("no","","Person, Family, Organization")
+contact_fields[contact_fields$field_name == "c2_salutation", seq(3, 5)] <- c("no","","Words to follow Dear in a letter")
+contact_fields[contact_fields$field_name == "c2_autoincrement", seq(3, 5)] <- c("yes","","Auto incremented record number")
+contact_fields[contact_fields$field_name == "contact2_flourish_number", seq(3, 5)] <- c("yes","","Auto record name.  eg. Contact-0152")
+contact_fields[contact_fields$field_name == "contact2_applistic_number", seq(3, 5)] <- c("no","","Legacy PersonID in Applistic person table")
+contact_fields[contact_fields$field_name == "contact2_full_name", seq(3, 5)] <- c("no","","Name to appear on envelope")
+contact_fields[contact_fields$field_name == "contact2_nickname", seq(3, 5)] <- c("no","","Preferred or nickname.  Eg: Mike, Jimbo, C.J.")
+contact_fields[contact_fields$field_name == "member_id", seq(3, 5)] <- c("unused","Unused","Unused")
+contact_fields[contact_fields$field_name == "email_address", seq(3, 5)] <- c("unused","Unused","Unused")
+contact_fields <- contact_fields %>%
+  arrange(auto, field_name)
+
+ft <- goc.table(contact_fields, paste0("contact table has ",nrow(contact_fields[contact_fields$auto=="no",]), " data entry fields, ", nrow(contact_fields), " total fields"))
+ft
+
+write_csv(contact_fields, "contact_fields.csv")
+```
+# Gifts
+```{r gift_fields}
+gifts <- get.gifts() %>%
+  mutate(across(where(is.numeric), ~ ifelse(is.na(.), 0, 1))) %>%
+  mutate(across(where(is.character), ~ ifelse(. == "" | . == "NA" | is.na(.), 0, 1))) %>%
+  summarise(across(everything(), sum))
+gift_fields <- as.data.frame(t(gifts)) %>%
+  mutate(field_name = rownames(t(gifts)), auto = "", action = "", notes = "") %>%
+  rename(non_blank = V1) %>%
+  select(field_name, non_blank, auto, action, notes)
+
+gift_fields[gift_fields$field_name == "id", seq(3, 5)] <- c("yes","","UUID of gift record")
+gift_fields[gift_fields$field_name == "name", seq(3, 5)] <- c("yes","","Auto generated record name, e.g., Gift-0113")
+gift_fields[gift_fields$field_name == "date_entered", seq(3, 5)] <- c("yes","","Date record created")
+gift_fields[gift_fields$field_name == "date_modified", seq(3, 5)] <- c("yes","","Date record last updated")
+gift_fields[gift_fields$field_name == "modified_user_id", seq(3, 5)] <- c("yes","","UUID of user who last modified")
+gift_fields[gift_fields$field_name == "created_by", seq(3, 5)] <- c("yes","","UUID of user who created record")
+gift_fields[gift_fields$field_name == "description", seq(3, 5)] <- c("unused","Unused","Unused")
+gift_fields[gift_fields$field_name == "deleted", seq(3, 5)] <- c("no","","1=deleted, 0 = not deleted")
+gift_fields[gift_fields$field_name == "assigned_user_id", seq(3, 5)] <- c("no","","UUID of user/member owner of the record")
+gift_fields[gift_fields$field_name == "flo_gift_date", seq(3, 5)] <- c("no","","Date Gift received by the GOC")
+gift_fields[gift_fields$field_name == "gift_contact_id", seq(3, 5)] <- c("unused","Unused","Unused")
+gift_fields[gift_fields$field_name == "flo_gift_amount", seq(3, 5)] <- c("no","","Dollar amount of gift. Dollar value of in-kind gift.")
+gift_fields[gift_fields$field_name == "flo_gift_payment_method", seq(3, 5)] <- c("no","","Payment Method. Eg. Cash, Check, PayPal")
+gift_fields[gift_fields$field_name == "flo_gift_campaign", seq(3, 5)] <- c("no","","Campaign. Eg. 2023 Amazing Give")
+gift_fields[gift_fields$field_name == "flo_anonymous_gift", seq(3, 5)] <- c("no","","Restricted Gift. 1=yes,0=no")
+gift_fields[gift_fields$field_name == "flo_restricted_gift", seq(3, 5)] <- c("no","","Anonymous. 1=yes,0=no")
+gift_fields[gift_fields$field_name == "flo_thank_you_date", seq(3, 5)] <- c("no","","Date thank you was mailed or emailed by GOC")
+gift_fields[gift_fields$field_name == "GOC_restriction_letter", seq(3, 5)] <- c("no","","URL of restriction letter")
+gift_fields[gift_fields$field_name == "GOC_curator_comments", seq(3, 5)] <- c("no","","Comments regarding the gift record")
+gift_fields[gift_fields$field_name == "GOC_gift_comments", seq(3, 5)] <- c("no","","Comments by donor regarding gift")
+gift_fields[gift_fields$field_name == "contact_2_id", seq(3, 5)] <- c("no","","UUID of donor in contacts (sa_contact_2 table)")
+gift_fields[gift_fields$field_name == "gifts_autoincrement", seq(3, 5)] <- c("yes","","Auto incremented record number")
+
+gift_fields <- gift_fields %>%
+  arrange(auto, field_name)
+
+ft <- goc.table(gift_fields, paste0("gift table has ",nrow(gift_fields[gift_fields$auto=="no",]), " data entry fields, ", nrow(gift_fields), " total fields"))
+ft
+
+write_csv(gift_fields, "gift_fields.csv")
+```
+# Members
+```{r members}
+members <- get.members() %>%
+  mutate(across(where(is.numeric), ~ ifelse(is.na(.), 0, 1))) %>%
+  mutate(across(where(is.character), ~ ifelse(. == "" | . == "NA" | is.na(.), 0, 1))) %>%
+  summarise(across(everything(), sum))
+member_fields <- as.data.frame(t(members)) %>%
+  mutate(field_name = rownames(t(members)), auto = "", action = "", notes = "") %>%
+  rename(non_blank = V1) %>%
+  select(field_name, non_blank, auto, action, notes)
+
+member_fields[member_fields$field_name=="age", seq(3, 5)] <- c("yes","","Auto-computed from date of birth")
+member_fields[member_fields$field_name=="agency_id_c", seq(3, 5)] <- c("no","","UUID of agency in sa_contacts_2")
+member_fields[member_fields$field_name=="assigned_user_id", seq(3, 5)] <- c("no","","UUID of user/member owner of the record")
+member_fields[member_fields$field_name=="avg_time_at_ch", seq(3, 5)] <- c("yes","","Auto-computed average time at clubhouse")
+member_fields[member_fields$field_name=="birthdate", seq(3, 5)] <- c("no","","Date of birth of member")
+member_fields[member_fields$field_name=="birthday_month", seq(3, 5)] <- c("yes","","Auto-computed from date of birth")
+member_fields[member_fields$field_name=="campaign_id", seq(3, 5)] <- c("unused","Unused","Unused")
+member_fields[member_fields$field_name=="contact_autoincrement", seq(3, 5)] <- c("yes","","Auto-generated record number")
+member_fields[member_fields$field_name=="contact_flourish_number", seq(3, 5)] <- c("yes","","Auto-generated record name, Eg. FlourishID-00245")
+member_fields[member_fields$field_name=="contact_id_c", seq(3, 5)] <- c("no","","UUID of coresponding record in sa_contacts_2")
+member_fields[member_fields$field_name=="created_by", seq(3, 5)] <- c("yes","","UUID of user creating the record")
+member_fields[member_fields$field_name=="date_entered", seq(3, 5)] <- c("yes","","Date record was created")
+member_fields[member_fields$field_name=="date_modified", seq(3, 5)] <- c("yes","","Date record was last edited")
+member_fields[member_fields$field_name=="deleted", seq(3, 5)] <- c("no","","1=deleted, 0=not deleted")
+member_fields[member_fields$field_name=="description", seq(3, 5)] <- c("unused","Unused","Unused")
+member_fields[member_fields$field_name=="do_not_call", seq(3, 5)] <- c("no","","1=do not call, 0=okay to call")
+member_fields[member_fields$field_name=="emergency_address_city", seq(3, 5)] <- c("no","","Emergency Contact City")
+member_fields[member_fields$field_name=="emergency_address_country", seq(3, 5)] <- c("no","","Emergency Contact Country")
+member_fields[member_fields$field_name=="emergency_address_postalcode", seq(3, 5)] <- c("no","","Emergency Contact Zip Code")
+member_fields[member_fields$field_name=="emergency_address_state", seq(3, 5)] <- c("no","","Emergency Contact State")
+member_fields[member_fields$field_name=="emergency_address_street", seq(3, 5)] <- c("no","","Emergency Contact Street Address")
+member_fields[member_fields$field_name=="first_name", seq(3, 5)] <- c("no","","First Name of Member")
+member_fields[member_fields$field_name=="flo_accessibility_restrictions", seq(3, 5)] <- c("no","","Multi-valued member accessibility restrictions")
+member_fields[member_fields$field_name=="flo_agency_comments", seq(3, 5)] <- c("no","","Narrative from referring agency")
+member_fields[member_fields$field_name=="flo_allergies", seq(3, 5)] <- c("no","","Multi-pick member allergies")
+member_fields[member_fields$field_name=="flo_annual_income", seq(3, 5)] <- c("no","","Member monthly income categories")
+member_fields[member_fields$field_name=="flo_application_date", seq(3, 5)] <- c("no","","Date of application")
+member_fields[member_fields$field_name=="flo_application_link", seq(3, 5)] <- c("no","","URL of scanned application")
+member_fields[member_fields$field_name=="flo_approved_contact_methods_c", seq(3, 5)] <- c("no","","Multi-pick, Member approved contact methods")
+member_fields[member_fields$field_name=="flo_billing_code_c", seq(3, 5)] <- c("unused","Unused","Unused")
+member_fields[member_fields$field_name=="flo_considered_lgbt_c", seq(3, 5)] <- c("no","","LGBTQ yes/no/unk")
+member_fields[member_fields$field_name=="flo_considered_veteran_c", seq(3, 5)] <- c("no","","Veteran yes/no/unk")
+member_fields[member_fields$field_name=="flo_contact_record_type_c", seq(3, 5)] <- c("unused","Unused","All marked Member")
+member_fields[member_fields$field_name=="flo_deceased_c", seq(3, 5)] <- c("no","","Deceased yes/no/unk")
+member_fields[member_fields$field_name=="flo_degrees_certificates", seq(3, 5)] <- c("no","","Muli-valued Member degrees and certificates")
+member_fields[member_fields$field_name=="flo_diagnoses_mult", seq(3, 5)] <- c("no","","Multi-valued Member diagnose(s)")
+member_fields[member_fields$field_name=="flo_diagnosis_comments", seq(3, 5)] <- c("no","","Comments regarding diagnoses")
+member_fields[member_fields$field_name=="flo_education_comments", seq(3, 5)] <- c("no","","Comments/details regarding education")
+member_fields[member_fields$field_name=="flo_email_opt_out_c", seq(3, 5)] <- c("no","","Member opt out of email Yes/No")
+member_fields[member_fields$field_name=="flo_emergency_con_phone_c", seq(3, 5)] <- c("no","","Emergency contact phone")
+member_fields[member_fields$field_name=="flo_emergency_contact_c", seq(3, 5)] <- c("no","","Emergency contact name")
+member_fields[member_fields$field_name=="flo_emergency_release", seq(3, 5)] <- c("no","","Emrgency releaase of medical info? 1=yes, 0=no")
+member_fields[member_fields$field_name=="flo_employment_comments", seq(3, 5)] <- c("no","","Comments regarding employment")
+member_fields[member_fields$field_name=="flo_ethnicity_hispanic_c", seq(3, 5)] <- c("no","","Federal Hispanic Ethnicity")
+member_fields[member_fields$field_name=="flo_ever_employed", seq(3, 5)] <- c("no","","Member ever employed? Yes/No/Unk")
+member_fields[member_fields$field_name=="flo_external_id1_c", seq(3, 5)] <- c("unused","Unused","Legacy Applistic ID")
+member_fields[member_fields$field_name=="flo_external_id2_c", seq(3, 5)] <- c("unused","Unused","Unused")
+member_fields[member_fields$field_name=="flo_food_stamps", seq(3, 5)] <- c("no","","Member receives food stamps (Yes/No/Unk)")
+member_fields[member_fields$field_name=="flo_gender_at_birth_c", seq(3, 5)] <- c("no","","Member gender at birth")
+member_fields[member_fields$field_name=="flo_gender_identity_c", seq(3, 5)] <- c("no","","Member current gender")
+member_fields[member_fields$field_name=="flo_highest_grade_completed", seq(3, 5)] <- c("no","","Numerical grade. 12=hs, 16=college")
+member_fields[member_fields$field_name=="flo_highest_level_of_educati_c", seq(3, 5)] <- c("unused","Unused","Unused")
+member_fields[member_fields$field_name=="flo_housing_comments", seq(3, 5)] <- c("no","","Comments regarding housing")
+member_fields[member_fields$field_name=="flo_housing_status_c", seq(3, 5)] <- c("no","","Housing status from pick-list")
+member_fields[member_fields$field_name=="flo_housing_voucher", seq(3, 5)] <- c("no","","Housing Voucher yes/no/unk")
+member_fields[member_fields$field_name=="flo_information_release", seq(3, 5)] <- c("no","","Release info? 1=yes, 0 = no")
+member_fields[member_fields$field_name=="flo_last_employment", seq(3, 5)] <- c("unused","Unused","Date of last employment (auto?)")
+member_fields[member_fields$field_name=="flo_mail_opt_out_c", seq(3, 5)] <- c("no","","Opt out of email, Yes/No")
+member_fields[member_fields$field_name=="flo_marital_status_c", seq(3, 5)] <- c("no","","Member marital status")
+member_fields[member_fields$field_name=="flo_media_release", seq(3, 5)] <- c("no","","Use name in media 1=yes, 0=no")
+member_fields[member_fields$field_name=="flo_membership_status_c", seq(3, 5)] <- c("no","","Member status, eg on leave")
+member_fields[member_fields$field_name=="flo_middle_name_c", seq(3, 5)] <- c("no","","Member's middle name")
+member_fields[member_fields$field_name=="flo_nickname_preferred_name_c", seq(3, 5)] <- c("no","","Member nickname")
+member_fields[member_fields$field_name=="flo_phone_number_4_c", seq(3, 5)] <- c("unused","Unused","Unused")
+member_fields[member_fields$field_name=="flo_phone_number_5_c", seq(3, 5)] <- c("unused","Unused","Unused")
+member_fields[member_fields$field_name=="flo_preferred_contact_methods", seq(3, 5)] <- c("no","","Single value from pick list eg Phone")
+member_fields[member_fields$field_name=="flo_preferred_language_c", seq(3, 5)] <- c("no","","Member preferred language")
+member_fields[member_fields$field_name=="flo_preferred_phone_c", seq(3, 5)] <- c("unused","Unused","Unused, see Primary")
+member_fields[member_fields$field_name=="flo_preferred_pronouns_c", seq(3, 5)] <- c("no","","Member preferred pronouns")
+member_fields[member_fields$field_name=="flo_preferred_pronouns_dd", seq(3, 5)] <- c("unused","Unused","Unused")
+member_fields[member_fields$field_name=="flo_primary_language_c", seq(3, 5)] <- c("no","","Member primary language")
+member_fields[member_fields$field_name=="flo_primary_phone", seq(3, 5)] <- c("no","","This is the phone number we use on outreach reports and on View Member")
+member_fields[member_fields$field_name=="flo_race_c", seq(3, 5)] <- c("unused","Unused","Unused")
+member_fields[member_fields$field_name=="flo_race_mult", seq(3, 5)] <- c("no","","Member race -- multiple")
+member_fields[member_fields$field_name=="flo_release_link", seq(3, 5)] <- c("no","","URL of photo permissions document")
+member_fields[member_fields$field_name=="flo_resume_link", seq(3, 5)] <- c("no","","URL of resume")
+member_fields[member_fields$field_name=="flo_secondary_language_c", seq(3, 5)] <- c("no","","Member secondary language")
+member_fields[member_fields$field_name=="flo_secondary_phone", seq(3, 5)] <- c("no","","A second phone we will use to contact Member")
+member_fields[member_fields$field_name=="flo_ssdi", seq(3, 5)] <- c("no","","Member receives SSI (Yes/No/Unk)")
+member_fields[member_fields$field_name=="flo_ssi", seq(3, 5)] <- c("no","","Members receives SSDI (Yes/No/Unk)")
+member_fields[member_fields$field_name=="flo_transportation_mode_c", seq(3, 5)] <- c("no","","Member transportation mode")
+member_fields[member_fields$field_name=="flo_type_senior_citizen_c", seq(3, 5)] <- c("unused","Unused","Unused")
+member_fields[member_fields$field_name=="flo_type_young_adults_c", seq(3, 5)] <- c("unused","Unused","Unused")
+member_fields[member_fields$field_name=="flo_unit_chosen_by_member_c", seq(3, 5)] <- c("unused","Unused","Unused")
+member_fields[member_fields$field_name=="goc_contact_id", seq(3, 5)] <- c("no","","UUID of staff assigned to the Member")
+member_fields[member_fields$field_name=="id", seq(3, 5)] <- c("yes","","UUID of member record")
+member_fields[member_fields$field_name=="last_attended", seq(3, 5)] <- c("yes","","Auto-computed from attendance")
+member_fields[member_fields$field_name=="last_name", seq(3, 5)] <- c("no","","Legal last name of member")
+member_fields[member_fields$field_name=="member_address_city", seq(3, 5)] <- c("unused","Unused","See Primary")
+member_fields[member_fields$field_name=="member_address_country", seq(3, 5)] <- c("unused","Unused","See Primary")
+member_fields[member_fields$field_name=="member_address_postalcode", seq(3, 5)] <- c("unused","Unused","See Primary")
+member_fields[member_fields$field_name=="member_address_state", seq(3, 5)] <- c("unused","Unused","See Primary")
+member_fields[member_fields$field_name=="member_address_street", seq(3, 5)] <- c("unused","Unused","See Primary")
+member_fields[member_fields$field_name=="member_address_street_2", seq(3, 5)] <- c("unused","Unused","See Primary")
+member_fields[member_fields$field_name=="member_address_street_3", seq(3, 5)] <- c("unused","Unused","See Primary")
+member_fields[member_fields$field_name=="modified_user_id", seq(3, 5)] <- c("yes","","UUID of user who last edited the record")
+member_fields[member_fields$field_name=="phone_home", seq(3, 5)] <- c("no","","Phone at residence")
+member_fields[member_fields$field_name=="phone_mobile", seq(3, 5)] <- c("no","","Mobile phone")
+member_fields[member_fields$field_name=="phone_other", seq(3, 5)] <- c("no","","Other phone")
+member_fields[member_fields$field_name=="phone_work", seq(3, 5)] <- c("no","","Phone number at work")
+member_fields[member_fields$field_name=="photo", seq(3, 5)] <- c("unused","Unused","Photo of Member")
+member_fields[member_fields$field_name=="portal_account_disabled", seq(3, 5)] <- c("unused","Unused","Unused")
+member_fields[member_fields$field_name=="portal_user_type", seq(3, 5)] <- c("unused","Unused","Unused")
+member_fields[member_fields$field_name=="primary_address_city", seq(3, 5)] <- c("no","","Member Address -- city")
+member_fields[member_fields$field_name=="primary_address_country", seq(3, 5)] <- c("no","","Member Address -- Country")
+member_fields[member_fields$field_name=="primary_address_postalcode", seq(3, 5)] <- c("no","","Member Address -- Zip Code")
+member_fields[member_fields$field_name=="primary_address_state", seq(3, 5)] <- c("no","","Member Address -- State")
+member_fields[member_fields$field_name=="primary_address_street", seq(3, 5)] <- c("no","","Member Address -- Street")
+member_fields[member_fields$field_name=="referrer_id_c", seq(3, 5)] <- c("no","","UUID in sa_contacts_2 of person making referral")
+member_fields[member_fields$field_name=="refererr_id_c", seq(3, 5)] <- c("unused","Unused","Misspelled.  Unused")
+member_fields[member_fields$field_name=="referral_source_id_c", seq(3, 5)] <- c("no","","UUID in sa_contacts_2 of agency making referral")
+member_fields[member_fields$field_name=="referral_type", seq(3, 5)] <- c("no","","Pick-list, eg, self-referral")
+member_fields[member_fields$field_name=="reports_to_id", seq(3, 5)] <- c("unused","Unused","Unused")
+member_fields[member_fields$field_name=="salutation", seq(3, 5)] <- c("unused","Unused","Pick-list: Mr, Ms., Mrs., etc")
+
+member_fields <- member_fields %>%
+  arrange(auto, field_name)
+
+ft <- goc.table(member_fields, paste0("member table has ",nrow(member_fields[member_fields$auto=="no",]), " data entry fields, ", nrow(member_fields), " total fields"))
+ft
+
+write_csv(member_fields, "member_fields.csv")
+```
+# Attendance
+```{r attendance-fields}
+attendance <- get.attendance() %>%
+  mutate(across(where(is.numeric), ~ ifelse(is.na(.), 0, 1))) %>%
+  mutate(across(where(is.character), ~ ifelse(. == "" | . == "NA" | is.na(.), 0, 1))) %>%
+  summarise(across(everything(), sum))
+attendance_fields <- as.data.frame(t(attendance)) %>%
+  mutate(field_name = rownames(t(attendance)), auto = "", action = "", notes = "") %>%
+  rename(non_blank = V1) %>%
+  select(field_name, non_blank, auto, action, notes)
+
+attendance_fields[attendance_fields$field_name == "assigned_user_id", seq(3, 5)] <- c("no","","UUID of user/member owner of record")
+attendance_fields[attendance_fields$field_name == "contact_2_id", seq(3, 5)] <- c("no","","UUID of person attending")
+attendance_fields[attendance_fields$field_name == "contact_id", seq(3, 5)] <- c("unused","Unused","Unused")
+attendance_fields[attendance_fields$field_name == "created_by", seq(3, 5)] <- c("yes","","UUID of person creating the record")
+attendance_fields[attendance_fields$field_name == "da_autoincrement", seq(3, 5)] <- c("yes","","Auto generated record number")
+attendance_fields[attendance_fields$field_name == "da_comments", seq(3, 5)] <- c("no","","Comments on the attendance")
+attendance_fields[attendance_fields$field_name == "da_date_of_attendance", seq(3, 5)] <- c("no","","Date of attendance")
+attendance_fields[attendance_fields$field_name == "da_reviewed", seq(3, 5)] <- c("yes","","Reviewd? 1=yes, 0 = no")
+attendance_fields[attendance_fields$field_name == "da_social_event", seq(3, 5)] <- c("no","","Social Event? 1=yes, 0=no")
+attendance_fields[attendance_fields$field_name == "da_time_in", seq(3, 5)] <- c("no","","Date time person began attendance")
+attendance_fields[attendance_fields$field_name == "da_time_in_hour", seq(3, 5)] <- c("no","","Hour person began attendance")
+attendance_fields[attendance_fields$field_name == "da_time_out", seq(3, 5)] <- c("no","","Date time person ended attendance")
+attendance_fields[attendance_fields$field_name == "da_time_out_hour", seq(3, 5)] <- c("no","","Hour person ended attendance")
+attendance_fields[attendance_fields$field_name == "da_total_hours", seq(3, 5)] <- c("yes","","Auto-computed")
+attendance_fields[attendance_fields$field_name == "date_entered", seq(3, 5)] <- c("yes","","Date the attendance record was created")
+attendance_fields[attendance_fields$field_name == "date_modified", seq(3, 5)] <- c("yes","","Date the attendance record was modified")
+attendance_fields[attendance_fields$field_name == "deleted", seq(3, 5)] <- c("yes","","1=deleted, 0=not deleted")
+attendance_fields[attendance_fields$field_name == "description", seq(3, 5)] <- c("unused","Unused","Unused")
+attendance_fields[attendance_fields$field_name == "group_activity_id", seq(3, 5)] <- c("unused","Future","UUID of group activity")
+attendance_fields[attendance_fields$field_name == "id", seq(3, 5)] <- c("yes","","UUID of attendance record")
+attendance_fields[attendance_fields$field_name == "location", seq(3, 5)] <- c("no","","Location of attendance")
+attendance_fields[attendance_fields$field_name == "modified_user_id", seq(3, 5)] <- c("yes","","UUID of user who last edited the record")
+attendance_fields[attendance_fields$field_name == "name", seq(3, 5)] <- c("yes","","Auto generated name for record, eg. ATT-56663")
+
+attendance_fields <- attendance_fields %>%
+  arrange(auto, field_name)
+
+ft <- goc.table(attendance_fields, paste0("attendance table has ",nrow(attendance_fields[attendance_fields$auto=="no",]), " data entry fields, ", nrow(attendance_fields), " total fields"))
+ft
+
+write_csv(attendance_fields, "attendance_fields.csv")
+```
+# Goals
+```{r goals_fields}
+goals <- get.goals() %>%
+  mutate(across(where(is.numeric), ~ ifelse(is.na(.), 0, 1))) %>%
+  mutate(across(where(is.character), ~ ifelse(. == "" | . == "NA" | is.na(.), 0, 1))) %>%
+  summarise(across(everything(), sum))
+goal_fields <- as.data.frame(t(goals)) %>%
+  mutate(field_name = rownames(t(goals)), auto = "", action = "", notes = "") %>%
+  rename(non_blank = V1) %>%
+  select(field_name, non_blank, auto, action, notes)
+
+
+goal_fields[goal_fields$field_name == "assigned_user_id", seq(3, 5)] <- c("no","","UUID of user/member record owner")
+goal_fields[goal_fields$field_name == "contact_2_id", seq(3, 5)] <- c("no","","UUID of staff goal writer")
+goal_fields[goal_fields$field_name == "contact_id", seq(3, 5)] <- c("no","","UUID of member for goals")
+goal_fields[goal_fields$field_name == "created_by", seq(3, 5)] <- c("yes","","UUID of record creator")
+goal_fields[goal_fields$field_name == "date_entered", seq(3, 5)] <- c("yes","","Date record created")
+goal_fields[goal_fields$field_name == "date_modified", seq(3, 5)] <- c("yes","","Date record last edited")
+goal_fields[goal_fields$field_name == "deleted", seq(3, 5)] <- c("yes","","1=deleted, 0=not deleted")
+goal_fields[goal_fields$field_name == "description", seq(3, 5)] <- c("unused","Unused","Unused")
+goal_fields[goal_fields$field_name == "flo_goal_action_plan", seq(3, 5)] <- c("no","","Text describing steps to acheive goal")
+goal_fields[goal_fields$field_name == "flo_goal_creation_date", seq(3, 5)] <- c("no","","Date goal created")
+goal_fields[goal_fields$field_name == "flo_goal_description", seq(3, 5)] <- c("no","","Text describing goal")
+goal_fields[goal_fields$field_name == "flo_goal_due_date", seq(3, 5)] <- c("no","","Planned date for completion of goal")
+goal_fields[goal_fields$field_name == "flo_goal_end_date", seq(3, 5)] <- c("no","","Actual end of goal")
+goal_fields[goal_fields$field_name == "flo_goal_needs", seq(3, 5)] <- c("no","","Needs to complete the goal")
+goal_fields[goal_fields$field_name == "flo_goal_other_support", seq(3, 5)] <- c("no","","Other support needed to complete the goal")
+goal_fields[goal_fields$field_name == "flo_goal_staff_support", seq(3, 5)] <- c("no","","Staff support needed to complete the goal")
+goal_fields[goal_fields$field_name == "flo_goal_start_date", seq(3, 5)] <- c("no","","Goal start date")
+goal_fields[goal_fields$field_name == "flo_goal_status", seq(3, 5)] <- c("no","","Current status of the work to complete the goal")
+goal_fields[goal_fields$field_name == "flo_goal_type", seq(3, 5)] <- c("no","","Type of goal from pull down list")
+goal_fields[goal_fields$field_name == "goals_autoincrement", seq(3, 5)] <- c("yes","","Auto incremented record number")
+goal_fields[goal_fields$field_name == "id", seq(3, 5)] <- c("yes","","UUID of the goal record")
+goal_fields[goal_fields$field_name == "modified_user_id", seq(3, 5)] <- c("yes","","UUID of the last editor of the goal")
+goal_fields[goal_fields$field_name == "name", seq(3, 5)] <- c("yes","","Auto generated record name, eg. goal-0788")
+
+goal_fields <- goal_fields %>%
+  arrange(auto, field_name)
+
+ft <- goc.table(goal_fields, paste0("goal table has ",nrow(goal_fields[goal_fields$auto=="no",]), " data entry fields, ", nrow(goal_fields), " total fields"))
+
+ft
+
+write_csv(goal_fields, "goal_fields.csv")
+```
+# Supports
+```{r support_fields}
+supports <- get.supports() %>%
+  mutate(across(where(is.numeric), ~ ifelse(is.na(.), 0, 1))) %>%
+  mutate(across(where(is.character), ~ ifelse(. == "" | . == "NA" | is.na(.), 0, 1))) %>%
+  summarise(across(everything(), sum))
+support_fields <- as.data.frame(t(supports)) %>%
+  mutate(field_name = rownames(t(supports)), auto = "", action = "", notes = "") %>%
+  rename(non_blank = V1) %>%
+  select(field_name, non_blank, auto, action, notes)
+
+support_fields[support_fields$field_name == "assigned_user_id", seq(3, 5)] <- c("no","","UUID of user/member record owner")
+support_fields[support_fields$field_name == "created_by", seq(3, 5)] <- c("yes","","UUID of record creator")
+support_fields[support_fields$field_name == "date_entered", seq(3, 5)] <- c("yes","","Date record was created")
+support_fields[support_fields$field_name == "date_modified", seq(3, 5)] <- c("yes","","Date record was last edited")
+support_fields[support_fields$field_name == "deleted", seq(3, 5)] <- c("yes","","1=deleted, 0=not deleted")
+support_fields[support_fields$field_name == "description", seq(3, 5)] <- c("unused","Unused","Unused")
+support_fields[support_fields$field_name == "flo_support_date", seq(3, 5)] <- c("no","","Date of support")
+support_fields[support_fields$field_name == "flo_support_duration", seq(3, 5)] <- c("no","","Duration of support in minutes")
+support_fields[support_fields$field_name == "flo_support_note", seq(3, 5)] <- c("no","","Text describing support")
+support_fields[support_fields$field_name == "flo_support_type", seq(3, 5)] <- c("no","","Type of support from pull-down, Eg: Culinary")
+support_fields[support_fields$field_name == "id", seq(3, 5)] <- c("yes","","UUID of support record")
+support_fields[support_fields$field_name == "modified_user_id", seq(3, 5)] <- c("yes","","UUID of record editor")
+support_fields[support_fields$field_name == "name", seq(3, 5)] <- c("yes","","Auto generated record name, Eg. S-00011")
+support_fields[support_fields$field_name == "sa_contacts_2_id", seq(3, 5)] <- c("no","","UUID of staff member providing support")
+support_fields[support_fields$field_name == "support_autoincrement", seq(3, 5)] <- c("yes","","Auto incremented record number")
+
+support_fields <- support_fields %>%
+  arrange(auto, field_name)
+
+ft <- goc.table(support_fields, paste0("support table has ",nrow(support_fields[support_fields$auto=="no",]), " data entry fields, ", nrow(support_fields), " total fields"))
+ft
+
+write_csv(support_fields, "support_fields.csv")
+```
+# Progress Notes
+```{r progress_note_fields}
+progress.notes <- get.progress.notes() %>%
+  mutate(across(where(is.numeric), ~ ifelse(is.na(.), 0, 1))) %>%
+  mutate(across(where(is.character), ~ ifelse(. == "" | . == "NA" | is.na(.), 0, 1))) %>%
+  summarise(across(everything(), sum))
+progress_note_fields <- as.data.frame(t(progress.notes)) %>%
+  mutate(field_name = rownames(t(progress.notes)), auto = "", action = "", notes = "") %>%
+  rename(non_blank = V1) %>%
+  select(field_name, non_blank, auto, action, notes)
+
+progress_note_fields[progress_note_fields$field_name == "assigned_user_id", seq(3, 5)] <- c("no","","UUID of user/member that owns record")
+progress_note_fields[progress_note_fields$field_name == "contact_2_id", seq(3, 5)] <- c("no","","UUID of author of progress note")
+progress_note_fields[progress_note_fields$field_name == "contact_id", seq(3, 5)] <- c("no","","UUID of member who is subject of note")
+progress_note_fields[progress_note_fields$field_name == "created_by", seq(3, 5)] <- c("yes","","UUID of user who created record")
+progress_note_fields[progress_note_fields$field_name == "date_entered", seq(3, 5)] <- c("yes","","Date record created")
+progress_note_fields[progress_note_fields$field_name == "date_modified", seq(3, 5)] <- c("yes","","Date record last updated")
+progress_note_fields[progress_note_fields$field_name == "deleted", seq(3, 5)] <- c("yes","","1=deleted, 0=not deleted")
+progress_note_fields[progress_note_fields$field_name == "description", seq(3, 5)] <- c("unused","Unused","Unused")
+progress_note_fields[progress_note_fields$field_name == "flo_date_of_note", seq(3, 5)] <- c("no","","Date of progress note")
+progress_note_fields[progress_note_fields$field_name == "flo_note_end_date", seq(3, 5)] <- c("no","","End date of period covered by the note")
+progress_note_fields[progress_note_fields$field_name == "flo_note_start_date", seq(3, 5)] <- c("no","","Start date of period covered by the note")
+progress_note_fields[progress_note_fields$field_name == "goal_id", seq(3, 5)] <- c("no","","UUID of goal for this progress note")
+progress_note_fields[progress_note_fields$field_name == "id", seq(3, 5)] <- c("yes","","UUID of the progress note record")
+progress_note_fields[progress_note_fields$field_name == "modified_user_id", seq(3, 5)] <- c("yes","","UUID of user who last edited the progress note")
+progress_note_fields[progress_note_fields$field_name == "name", seq(3, 5)] <- c("yes","","Auto generated record name, e.g. PN-9223")
+progress_note_fields[progress_note_fields$field_name == "pn_autoincrement", seq(3, 5)] <- c("yes","","Auto generated record number")
+progress_note_fields[progress_note_fields$field_name == "progress_note", seq(3, 5)] <- c("yes","","Text of the progress note")
+
+progress_note_fields <- progress_note_fields %>%
+  arrange(auto, field_name)
+
+ft <- goc.table(progress_note_fields, paste0("progress_note table has ",nrow(progress_note_fields[progress_note_fields$auto=="no",]), " data entry fields, ", nrow(progress_note_fields), " total fields"))
+ft
+
+write_csv(progress_note_fields, "progress_note_fields.csv")
+```
+# Outreach
+```{r outreach_fields}
+outreach <- get.outreach() %>%
+  mutate(across(where(is.numeric), ~ ifelse(is.na(.), 0, 1))) %>%
+  mutate(across(where(is.character), ~ ifelse(. == "" | . == "NA" | is.na(.), 0, 1))) %>%
+  summarise(across(everything(), sum))
+outreach_fields <- as.data.frame(t(outreach)) %>%
+  mutate(field_name = rownames(t(outreach)), auto = "", action = "", notes = "") %>%
+  rename(non_blank = V1) %>%
+  select(field_name, non_blank, auto, action, notes)
+
+outreach_fields[outreach_fields$field_name == "id", seq(3, 5)] <- c("yes","","UUID of outreach record")
+outreach_fields[outreach_fields$field_name == "name", seq(3, 5)] <- c("yes","","Auto generated name, eg. RO-0223")
+outreach_fields[outreach_fields$field_name == "date_entered", seq(3, 5)] <- c("yes","","Date record created")
+outreach_fields[outreach_fields$field_name == "date_modified", seq(3, 5)] <- c("yes","","Date record last edited")
+outreach_fields[outreach_fields$field_name == "modified_user_id", seq(3, 5)] <- c("yes","","UUID of user that last edited the record")
+outreach_fields[outreach_fields$field_name == "created_by", seq(3, 5)] <- c("yes","","UUID of user that created the record")
+outreach_fields[outreach_fields$field_name == "description", seq(3, 5)] <- c("unused","Unused","Unused")
+outreach_fields[outreach_fields$field_name == "deleted", seq(3, 5)] <- c("yes","","1=deleted, 0=not deleted")
+outreach_fields[outreach_fields$field_name == "assigned_user_id", seq(3, 5)] <- c("no","","UUID of user/member that owns record")
+outreach_fields[outreach_fields$field_name == "ro_date_of_reach_out", seq(3, 5)] <- c("no","","Date outreach was done")
+outreach_fields[outreach_fields$field_name == "ro_notes_from_reach_out", seq(3, 5)] <- c("no","","Notes from the outreach")
+outreach_fields[outreach_fields$field_name == "ro_outcome_of_ro", seq(3, 5)] <- c("no","","Pull-down value of outcome of outreach")
+outreach_fields[outreach_fields$field_name == "ro_type_of_reachout", seq(3, 5)] <- c("no","","Method used.  Eg. phone")
+outreach_fields[outreach_fields$field_name == "ro_primary_support_type", seq(3, 5)] <- c("unused","Unused","Unused")
+outreach_fields[outreach_fields$field_name == "ro_is_it_billable", seq(3, 5)] <- c("unused","Unused","Unused")
+outreach_fields[outreach_fields$field_name == "ro_autoincrement", seq(3, 5)] <- c("yes","","Auto numbering of records")
+outreach_fields[outreach_fields$field_name == "contact_id", seq(3, 5)] <- c("no","","UUID of member being outreached")
+outreach_fields[outreach_fields$field_name == "contact_id_c", seq(3, 5)] <- c("unused","Unused","Unused")
+outreach_fields[outreach_fields$field_name == "person1_c", seq(3, 5)] <- c("no","","UUID of person doing outreach")
+outreach_fields[outreach_fields$field_name == "person2_c", seq(3, 5)] <- c("no","","UUID of second person doing outreach (if two people)")
+
+outreach_fields <- outreach_fields %>%
+  arrange(auto, field_name)
+
+ft <- goc.table(outreach_fields, paste0("Outreach table has ",nrow(outreach_fields[outreach_fields$auto=="no",]), " data entry fields, ", nrow(outreach_fields), " total fields"))
+ft
+
+write_csv(outreach_fields, "outreach_fields.csv")
+```
+# Employment
+```{r employment_fields}
+employment <- get.employment() %>%
+  mutate(across(where(is.numeric), ~ ifelse(is.na(.), 0, 1))) %>%
+  mutate(across(where(is.character), ~ ifelse(. == "" | . == "NA" | is.na(.), 0, 1))) %>%
+  summarise(across(everything(), sum))
+employment_fields <- as.data.frame(t(employment)) %>%
+  mutate(field_name = rownames(t(employment)), auto = "", action = "", notes = "") %>%
+  rename(non_blank = V1) %>%
+  select(field_name, non_blank, auto, action, notes)
+
+employment_fields[employment_fields$field_name == "employer_id", seq(3, 5)] <- c("no","","UUID of employer in contacts")
+employment_fields[employment_fields$field_name == "currency_id", seq(3, 5)] <- c("unused","Unused","Unused")
+employment_fields[employment_fields$field_name == "emp_assessment_date", seq(3, 5)] <- c("no","","Date of employment assessment")
+employment_fields[employment_fields$field_name == "emp_assessment_link", seq(3, 5)] <- c("no","","URL of assessment")
+employment_fields[employment_fields$field_name == "employert_id", seq(3, 5)] <- c("unused","Unused","Unused")
+employment_fields[employment_fields$field_name == "employment_autoincrement", seq(3, 5)] <- c("no","","")
+employment_fields[employment_fields$field_name == "flo_emp_approximate_hourly_pay", seq(3, 5)] <- c("no","","Averqge Hourly Pay")
+employment_fields[employment_fields$field_name == "flo_emp_approximate_hours_wk", seq(3, 5)] <- c("no","","Average Hours worked per week")
+employment_fields[employment_fields$field_name == "flo_emp_comments", seq(3, 5)] <- c("no","","Comments on employment (not goal)")
+employment_fields[employment_fields$field_name == "flo_emp_date_end", seq(3, 5)] <- c("no","","Date employment ended")
+employment_fields[employment_fields$field_name == "flo_emp_date_start", seq(3, 5)] <- c("no","","Date employment started")
+employment_fields[employment_fields$field_name == "flo_emp_employer_name", seq(3, 5)] <- c("unused","Unused","Unused")
+employment_fields[employment_fields$field_name == "flo_emp_job_description", seq(3, 5)] <- c("no","","Job description")
+employment_fields[employment_fields$field_name == "flo_emp_job_reason_ended", seq(3, 5)] <- c("no","","Reason employment ended")
+employment_fields[employment_fields$field_name == "flo_emp_job_title", seq(3, 5)] <- c("no","","Job title")
+employment_fields[employment_fields$field_name == "flo_emp_job_type", seq(3, 5)] <- c("no","","Job support level")
+employment_fields[employment_fields$field_name == "assigned_user_id", seq(3, 5)] <- c("no","","UUID of user/member that owns record")
+employment_fields[employment_fields$field_name == "contact_id", seq(3, 5)] <- c("no","","UUID of Member employed")
+employment_fields[employment_fields$field_name == "deleted", seq(3, 5)] <- c("yes","","1=yes, 0=no")
+employment_fields[employment_fields$field_name == "description", seq(3, 5)] <- c("unused","Unused","Unused")
+employment_fields[employment_fields$field_name == "created_by", seq(3, 5)] <- c("yes","","UUID of user who created record")
+employment_fields[employment_fields$field_name == "date_entered", seq(3, 5)] <- c("yes","","Date record was created")
+employment_fields[employment_fields$field_name == "date_modified", seq(3, 5)] <- c("yes","","Last update date")
+employment_fields[employment_fields$field_name == "employment_autoincrement", seq(3, 5)] <- c("yes","","Auto-generated record number")
+employment_fields[employment_fields$field_name == "id", seq(3, 5)] <- c("yes","","UUID of record")
+employment_fields[employment_fields$field_name == "modified_user_id", seq(3, 5)] <- c("yes","","UUID of last editor")
+employment_fields[employment_fields$field_name == "name", seq(3, 5)] <- c("yes","","Auto generated record name, e.g. EMP-00012")
+
+employment_fields <- employment_fields %>%
+  arrange(auto, field_name)
+
+ft <- goc.table(employment_fields, paste0("Employment table has ",nrow(employment_fields[employment_fields$auto=="no",]), " data entry fields, ", nrow(employment_fields), " total fields"))
+ft
+
+write_csv(employment_fields, "employment_fields.csv")
+```

@@ -1,0 +1,57 @@
+---
+title: Check Attendance Records
+output:
+    html_document:
+        css: "../styles/styles.css"
+params:
+  date: !r Sys.Date()
+---
+```{r setup,echo=FALSE,message=FALSE,warning=FALSE}
+source("setup.R")
+```
+
+```{r check-attendance}
+attendance <- get.attendance()
+
+tab <- attendance %>%
+  filter(is.na(contact_2_id) | contact_2_id == "") %>%
+  select(name, da_date_of_attendance)
+
+ft <- goc.table(tab, paste0(nrow(tab), " Attendance records without attendee"))
+ft
+
+tab <- attendance %>%
+  filter(is.na(da_date_of_attendance) | da_date_of_attendance == "") %>%
+  select(name, da_date_of_attendance)
+
+ft <- goc.table(tab, paste0(nrow(tab), " Attendance records without date of attendance"))
+ft
+
+tab <- attendance %>%
+  filter(is.na(da_time_in) | da_time_in == "") %>%
+  select(name, da_time_in)
+
+ft <- goc.table(tab, paste0(nrow(tab), " Attendance records without time in"))
+ft
+
+tab <- attendance %>%
+  filter(is.na(da_time_out) | da_time_out == "") %>%
+  select(name, da_time_out)
+
+ft <- goc.table(tab, paste0(nrow(tab), " Attendance records without time out"))
+ft
+
+tab <- attendance %>%
+  group_by(location) %>%
+  tally()
+
+ft <- goc.table(tab, "Attendance locations")
+ft
+
+tab <- attendance %>%
+  filter(location == "Unknown") %>%
+  select(name, da_date_of_attendance, location)
+
+ft <- goc.table(tab, paste0(nrow(tab), " Attendance records with Unknown location"))
+ft
+```

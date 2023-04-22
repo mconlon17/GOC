@@ -1,0 +1,24 @@
+---
+title: Accessibility
+output:
+    html_document:
+        css: "../styles/styles.css"
+---
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+```{r allergies}
+accessibility <- get.members() %>%
+    filter(!str_detect(flo_accessibility_restrictions,"unknown") & !str_detect(flo_accessibility_restrictions,"none") & flo_accessibility_restrictions != "" & !is.na(flo_accessibility_restrictions)) %>%
+
+mutate(flo_accessibility_restrictions = gsub(",", "A", flo_accessibility_restrictions)) %>%
+mutate(flo_accessibility_restrictions = gsub("_", "B", flo_accessibility_restrictions)) %>%
+mutate(flo_accessibility_restrictions = gsub("[[:punct:]]", "", flo_accessibility_restrictions)) %>%
+mutate(flo_accessibility_restrictions = gsub("A", ", ", flo_accessibility_restrictions)) %>%
+mutate(flo_accessibility_restrictions = gsub("B", "_", flo_accessibility_restrictions)) %>%
+select(id,first_name, last_name, flo_accessibility_restrictions)
+
+ft <- goc.table(accessibility,"Member Accessibility Restrictions")
+ft
+    
+```

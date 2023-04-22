@@ -1,0 +1,75 @@
+---
+title: Monthly Member Progress Notes
+
+output:
+  html_document:
+      css: "../styles/styles.css"
+params:
+  date: !r Sys.Date()
+---
+
+```{r setup,echo=FALSE,message=FALSE,warning=FALSE}
+source("setup.R")
+```
+For the selected month, include all members who attended at least once.  For each member, find progress notes modified in the selected month.
+```{r dates}
+start_date <- floor_date(params$date, 'month')
+end_date <- ceiling_date(params$date, 'month') - days(1)
+
+ndays <- as.integer(as_date(Sys.Date())-as_date(start_date)) +1
+```
+# `r format(start_date,"%B, %Y")`
+```{r summary}
+
+contacts <- get.contacts() %>%
+  filter(grepl("Member", c2_groups)) %>%
+  mutate(Member = paste0(last_name, ", ", first_name)) %>%
+  select(id, Member) %>%
+  arrange(Member)
+
+# nrow(contacts)
+# ft <- goc.table(contacts)
+# ft
+
+contacts <- get.attendance(days=ndays) %>%
+  filter(as_date(da_date_of_attendance) %within% (start_date %--% end_date)) %>%
+  inner_join(contacts, by = c("contact_2_id" = "id")) %>%   # must attend, inner_join
+  group_by(contact_2_id, Member) %>%
+  tally() %>%
+  rename(`Times\nAttended`=n)
+
+# nrow(contacts)
+# ft<- goc.table(contacts, "Member Attendance")
+# ft
+
+pn <- get.progress.notes() %>%
+  filter(as_date(date_entered) %within% (start_date %--% end_date) | as_date(date_modified) %within% (start_date %--% end_date)) %>%
+    filter(modified_user_id != "4cde6014-5735-b6a8-2975-63e1844134be") %>% # filter out the bulk-loaded and modified progress notes
+    filter(created_by != "4cde6014-5735-b6a8-2975-63e1844134be")
+
+# nrow(pn)
+# ft<- goc.table(pn, "Progress Notes")
+# ft
+
+pn <- get.members(active.only=T) %>%
+  mutate(Name = paste0(last_name, ", ", first_name)) %>%
+  inner_join(pn, by=c("id"="contact_id")) %>%  # May have a progress_note, left_join
+  select(contact_id_c, Name, date_modified.y, progress_note)
+
+
+# nrow(pn)
+# ft <- goc.table(pn, "Progress Notes in Month")
+# ft
+
+tab <- contacts %>%
+  left_join(pn, by=c("contact_2_id"="contact_id_c")) %>%
+  ungroup() %>%
+  mutate(date_modified.y = as_date(date_modified.y)) %>%
+  rename(`Date of Note` = date_modified.y, `Progress Note` = progress_note) %>%
+  select(-contact_2_id, -Name) %>%
+  arrange(Member)
+
+# nrow(tab)
+ft <- goc.table(tab, "Members who attended with attendance count and progress notes")
+ft
+```

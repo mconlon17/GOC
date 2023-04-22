@@ -1,0 +1,65 @@
+---
+title: Check Contacts
+output:
+    html_document:
+        css: "../styles/styles.css"
+params:
+  date: !r Sys.Date()
+---
+```{r setup,echo=FALSE,message=FALSE,warning=FALSE}
+source("setup.R")
+```
+
+```{r check-contacts}
+contacts <- get.contacts()
+
+tab <- contacts %>%
+  mutate(HasPhone = ifelse(c2_primary_phone != "" & !is.na(c2_primary_phone) & c2_primary_phone != "NA"   ,"Yes","No")) %>%
+  group_by(HasPhone) %>%
+  tally()
+
+ft <- goc.table(tab, "Contact Record Has a Phone Number")
+ft
+
+tab <- contacts %>%
+  mutate(HasEmail = ifelse(!is.na(email_address)  ,"Yes","No")) %>%
+  group_by(HasEmail) %>%
+  tally()
+
+ft <- goc.table(tab, "Contact Record Has an Email Address")
+ft
+
+tab <- contacts %>%
+  mutate(HasAddress = ifelse(primary_address_street != "NA" ,"Yes","No")) %>%
+  group_by(HasAddress) %>%
+  tally()
+
+ft <- goc.table(tab, "Contact Record Has an Address")
+ft
+
+tab <- contacts %>%
+  filter(grepl("nl", primary_address_street)) %>%
+  select(contact2_flourish_number, primary_address_street)
+
+ft <- goc.table(tab, paste0(nrow(tab), " Contact Records with 'nl' in address"))
+ft
+
+tab <- contacts %>%
+  mutate(HasFullName = ifelse(contact2_full_name != "NA" ,"Yes","No")) %>%
+  group_by(HasFullName) %>%
+  tally()
+
+ft <- goc.table(tab, "Contact Record Has Full Name")
+ft
+
+
+tab <- contacts %>%
+  rename(Solicit = do_not_call, Type=c2_contact_record_type_c) %>%
+  mutate(Solicit = ifelse(Solicit == 0, "No", "Yes")) %>%
+  group_by(Type,Solicit) %>%
+  tally() %>%
+  spread(Solicit, n)
+
+ft <- goc.table(tab, "Solicit")
+ft
+```

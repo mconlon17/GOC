@@ -1,0 +1,53 @@
+---
+title: "Clean Member Phone"
+output:
+  html_document:
+    css: "../../styles/styles.css"
+---
+```{r setup,echo=F,message=F,warning=F}
+source("../setup.R")
+```
+Update the existing primary phone numbers, standardizing on the format xxx-xxx-xxxx
+```{r flourish}
+phones <- get.members(include.deleted = T) %>%
+  mutate(PhoneDigits = nchar(gsub("[^0-9]+", "", flo_primary_phone))) %>%
+  mutate(OldPhone = flo_primary_phone) %>%
+  mutate(NewPhone = gsub("[^0-9]+", "", flo_primary_phone)) %>%
+  mutate(NewPhone = paste0(
+    substring(NewPhone, 1, 3), "-",
+    substring(NewPhone, 4, 6), "-", substring(NewPhone, 7, 10)
+  )) %>%
+  mutate(better_phone = ifelse(PhoneDigits == 10, NewPhone, OldPhone)) %>%
+  mutate(date_modified = now()) %>%
+  mutate(modified_user_id = "4cde6014-5735-b6a8-2975-63e1844134be") %>%
+  mutate(better_phone = ifelse(OldPhone == "NA", "", better_phone)) %>%
+  filter(OldPhone != "" & OldPhone != "-" &
+    OldPhone != "N/A" & OldPhone != better_phone) %>%
+  select(id, date_modified, modified_user_id, OldPhone, better_phone)
+
+ft <- goc.table(phones, paste("Member Phone Number Cleaning", today()))
+ft
+```
+``` {r do-update}
+# Make a database connection to Flourish
+
+con <- flourish.connection()
+
+# Allow Tables to be loaded from R
+
+dbSendQuery(con, "SET GLOBAL local_infile = true;")
+
+# Create temporary table
+
+dbWriteTable(con, value = phones, name = "temp_phones", append = F, row.names = F)
+
+dbSendQuery(con, "UPDATE contacts
+                     INNER JOIN temp_phones ON
+                         contacts.id = temp_phones.id
+                     SET contacts.date_modified = temp_phones.date_modified,
+                         contacts.modified_user_id = temp_phones.modified_user_id,
+                         contacts.flo_primary_phone = temp_phones.better_phone;")
+
+dbSendQuery(con, "DROP TABLE temp_phones;")
+dbDisconnect(con)
+```

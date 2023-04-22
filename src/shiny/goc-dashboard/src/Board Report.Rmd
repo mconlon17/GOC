@@ -1,0 +1,75 @@
+---
+title: "Board Report"
+output:
+  html_document: 
+    css: "../styles/styles.css"
+params:
+  date: !r Sys.Date()
+---
+
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+
+A start on "Membership by the Numbers" for the board.  We will need Culinary, Education, and Employment data in Flourish for a complete report.  For now we have only the attendance portion of the report.
+
+```{r board}
+
+start_date <- floor_date(params$date-months(3))
+start_date 
+
+attendance <- get.attendance() %>%
+  filter(da_date_of_attendance >= start_date) %>%
+  mutate(YearMonth = ymd(paste0(year(da_date_of_attendance), "-", month(da_date_of_attendance), "-01")))
+
+contacts <- get.contacts() %>%
+  mutate(PersonType = "Other") %>%
+  mutate(PersonType = ifelse(grepl("Staff", c2_groups), "Staff", PersonType)) %>%
+  mutate(PersonType = ifelse(grepl("Member", c2_groups), "Member", PersonType)) %>%
+  mutate(Contact=id) %>%
+  filter(PersonType == "Member")
+
+attendance <- attendance %>%
+  inner_join(contacts, by = c("contact_2_id" = "id"))
+
+tab1 <- attendance %>%
+  group_by(YearMonth) %>%
+  summarise(UniqueMembers = n_distinct(Contact))
+tab1
+
+tab2 <- attendance %>%
+  group_by(YearMonth) %>%
+  summarise(AvgHrs = mean(da_total_hours))
+tab2
+
+tab3 <- attendance %>%
+  filter(wday(da_date_of_attendance) > 1 & wday(da_date_of_attendance) < 7) %>%
+  group_by(YearMonth, da_date_of_attendance) %>%
+  tally() %>%
+  group_by(YearMonth) %>%
+  summarize(ADA = mean(n))
+tab3
+
+tab4 <- contacts %>%
+  mutate(YearMonth = ymd(paste0(year(date_entered), "-", month(date_entered), "-01"))) %>%
+  group_by(YearMonth) %>%
+  tally()
+tab4
+
+board.report <- tab1 %>%
+  inner_join(tab2) %>%
+  inner_join(tab3) %>%
+  inner_join(tab4) %>%
+  mutate(Month = format(YearMonth, "%B %Y")) %>%
+  rename(
+    `Unique Members` = UniqueMembers, `Average Workday Hours` = AvgHrs,
+    `Average Daily Attendance` = ADA, `New Members` = n
+  ) %>%
+  select(
+    Month, `Unique Members`, `Average Workday Hours`, `Average Daily Attendance`,
+    `New Members`
+  )
+
+ft <- goc.table(board.report, paste0("Board report for ", Sys.Date()))
+ft
+```

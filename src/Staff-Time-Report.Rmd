@@ -1,0 +1,43 @@
+---
+title: GOC Staff Time Report
+output:
+  html_document:
+      css: "../styles/styles.css"
+params:
+    name: 'Leblanc, Paul'
+    start_date: 2023-02-13
+---
+```{css, echo=FALSE}
+h1, h4 { text-align: center; }
+```
+```{r setup,echo=FALSE,message=FALSE}
+source("setup.R")
+```
+```{r attendance-records-for-staff}
+
+end_date <- ymd(params$start_date) + 13
+
+ndays <- as.integer(as_date(Sys.Date())-as_date(params$start_date)) +1
+
+contacts <- get.contacts() %>%
+    filter(grepl("Staff",c2_groups)) %>%
+    mutate(Name=paste(last_name,first_name,sep=", ")) %>%
+    select(id, Name, c2_groups)
+
+attendance <- get.attendance() %>%
+    filter(as_datetime(da_date_of_attendance) %within% (ymd(params$start_date) %--% end_date))
+
+tab <- contacts %>%
+    left_join(attendance,by=c("id"="contact_2_id")) %>%
+    select(Name,da_date_of_attendance,da_time_in,da_time_out) %>%
+    rename(`Day`=da_date_of_attendance,`Time In`=da_time_in,`Time Out`=da_time_out) %>%
+    arrange(Name,Day,`Time In`,`Time Out`)
+
+ft <- goc.table(tab %>% filter(Name == params$name), paste("Attendance for",
+        params$name,"from",params$start_date,"to",end_date))
+ft
+
+
+
+
+```

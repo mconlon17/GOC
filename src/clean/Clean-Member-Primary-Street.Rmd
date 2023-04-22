@@ -1,0 +1,110 @@
+---
+title: "Clean Member Primary Street"
+output:
+  html_document: default
+---
+```{r setup,echo=F,message=F,warning=F}
+source("../setup.R")
+```
+```{r flourish}
+
+members <- get.members() %>%
+    mutate(OldStreet = primary_address_street) %>%
+    mutate(NewStreet = OldStreet) %>%
+    mutate(NewStreet = gsub("^NA$", "", NewStreet)) %>%
+    mutate(NewStreet = gsub("Ct\\.$", "Court", NewStreet)) %>%
+    mutate(NewStreet = gsub("Rd$", "Road", NewStreet)) %>%
+    mutate(NewStreet = gsub("Rd\\.$", "Road", NewStreet)) %>%
+    mutate(NewStreet = gsub(" rd ", " Road ", NewStreet)) %>%
+    mutate(NewStreet = gsub(" Rd ", " Road ", NewStreet)) %>%
+    mutate(NewStreet = gsub(" Rd,", " Road;", NewStreet)) %>%
+    mutate(NewStreet = gsub("Crk$", "Creek", NewStreet)) %>%
+    mutate(NewStreet = gsub("Blvd$", "Boulevard", NewStreet)) %>%
+    mutate(NewStreet = gsub("Blvd,", "Boulevard;", NewStreet)) %>%
+    mutate(NewStreet = gsub("Blvd\\. ", "Boulevard; ", NewStreet)) %>%
+    mutate(NewStreet = gsub("Blvd\\.;", "Boulevard;", NewStreet)) %>%
+    mutate(NewStreet = gsub(" Blvd ", " Boulevard; ", NewStreet)) %>%
+    mutate(NewStreet = gsub(" place ", " Place; ", NewStreet)) %>%
+    mutate(NewStreet = gsub(" avenue ", " Avenue; ", NewStreet)) %>%
+    mutate(NewStreet = gsub("Ave\\.$", "Avenue", NewStreet)) %>%
+    mutate(NewStreet = gsub("Ave\\. ", "Avenue ", NewStreet)) %>%
+    mutate(NewStreet = gsub("Ave\\.;", "Avenue;", NewStreet)) %>%
+    mutate(NewStreet = gsub("Ave;", "Avenue;", NewStreet)) %>%
+    mutate(NewStreet = gsub("Ave,", "Avenue;", NewStreet)) %>%
+    mutate(NewStreet = gsub("Ave$", "Avenue", NewStreet)) %>%
+    mutate(NewStreet = gsub("AVE$", "Avenue", NewStreet)) %>%
+    mutate(NewStreet = gsub("WAY$", "Way", NewStreet)) %>%
+    mutate(NewStreet = gsub("Pl\\.$", "Place", NewStreet)) %>%
+    mutate(NewStreet = gsub("Pl\\.;", "Place;", NewStreet)) %>%
+    mutate(NewStreet = gsub("PL$", "Place", NewStreet)) %>%
+    mutate(NewStreet = gsub("PL;", "Place;", NewStreet)) %>%
+    mutate(NewStreet = gsub("Place\\.$", "Place", NewStreet)) %>%
+    mutate(NewStreet = gsub(" place", " Place", NewStreet)) %>%
+    mutate(NewStreet = gsub("Pl$", "Place", NewStreet)) %>%
+    mutate(NewStreet = gsub("Ln\\.$", "Lane", NewStreet)) %>%
+    mutate(NewStreet = gsub(" St ", " Street; ", NewStreet)) %>%
+    mutate(NewStreet = gsub(" St\\.", " Street", NewStreet)) %>%
+    mutate(NewStreet = gsub("St\\.$", "Street", NewStreet)) %>%
+    mutate(NewStreet = gsub("ST$", "Street", NewStreet)) %>%
+    mutate(NewStreet = gsub(" st,", " Street;", NewStreet)) %>%
+    mutate(NewStreet = gsub("St;", "Street;", NewStreet)) %>%
+    mutate(NewStreet = gsub("St$", "Street", NewStreet)) %>%
+    mutate(NewStreet = gsub("STREET", "Street", NewStreet)) %>%
+    mutate(NewStreet = gsub("Streeteet", "Street", NewStreet)) %>%
+    mutate(NewStreet = gsub("st\\. ", "st ", NewStreet)) %>%
+    mutate(NewStreet = gsub("st$", "st", NewStreet)) %>%
+    mutate(NewStreet = gsub("Dr$", "Drive", NewStreet)) %>%
+    mutate(NewStreet = gsub("Dr\\.$", "Drive", NewStreet)) %>%
+    mutate(NewStreet = gsub("Dr,", "Drive;", NewStreet)) %>%
+    mutate(NewStreet = gsub("dr$", "Drive", NewStreet)) %>%
+    mutate(NewStreet = gsub(" terr\\. ", " Terrace ", NewStreet)) %>%
+    mutate(NewStreet = gsub(" Ter\\. ", " Terrace ", NewStreet)) %>%
+    mutate(NewStreet = gsub(" Ter,", " Terrace;", NewStreet)) %>%
+    mutate(NewStreet = gsub(" Terr ", " Terrace ", NewStreet)) %>%
+    mutate(NewStreet = gsub(" nw ", " NW ", NewStreet)) %>%
+    mutate(NewStreet = gsub(" sw ", " SW ", NewStreet)) %>%
+    mutate(NewStreet = gsub(" ne ", " NE ", NewStreet)) %>%
+    mutate(NewStreet = gsub(" se ", " SE ", NewStreet)) %>%
+    mutate(NewStreet = gsub(" N\\.W\\. ", " NW ", NewStreet)) %>%
+    mutate(NewStreet = gsub(" S\\.W\\. ", " SW ", NewStreet)) %>%
+    mutate(NewStreet = gsub(" N\\.E\\. ", " NE ", NewStreet)) %>%
+    mutate(NewStreet = gsub(" S\\.E\\. ", " SE ", NewStreet)) %>%
+    mutate(NewStreet = gsub("apt ", "Apartment ", NewStreet)) %>%
+    mutate(NewStreet = gsub("Apt ", "Apartment ", NewStreet)) %>%
+    mutate(NewStreet = gsub("Apt ", "Apartment ", NewStreet)) %>%
+    mutate(NewStreet = gsub("Apt\\. ", "Apartment ", NewStreet)) %>%
+    mutate(NewStreet = gsub(",", ";", NewStreet)) %>%
+    mutate(date_modified = now()) %>%
+    filter(OldStreet != NewStreet) %>%
+    mutate(modified_user_id = "4cde6014-5735-b6a8-2975-63e1844134be") %>%
+    mutate(primary_address_street = NewStreet) %>%
+    select(id,date_modified, modified_user_id, OldStreet, primary_address_street)
+
+ft <- goc.table(members,paste(nrow(members)," Streets Cleaned",today()))
+ft
+```
+``` {r do-update}
+
+# Make a database connection to Flourish
+
+con <- flourish.connection()
+
+# Allow Tables to be loaded from R
+
+dbSendQuery(con, "SET GLOBAL local_infile = true;")
+
+# Create temporary table
+
+dbWriteTable(con, value = members, name = 'temp_update', append = F, row.names = F)
+
+dbSendQuery(con, 'UPDATE contacts
+                     INNER JOIN temp_update ON
+                         contacts.id = temp_update.id
+                     SET contacts.date_modified = temp_update.date_modified,
+                         contacts.modified_user_id = temp_update.modified_user_id,
+                         contacts.primary_address_street = temp_update.primary_address_street;')
+
+dbSendQuery(con, 'DROP TABLE temp_update;')
+dbDisconnect(con)
+
+```

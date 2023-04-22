@@ -1,0 +1,48 @@
+---
+title: Monthly Attendance Summary
+
+output:
+  html_document:
+      css: "../styles/styles.css"
+params:
+  date: !r Sys.Date()
+---
+
+```{r setup,echo=FALSE,message=FALSE,warning=FALSE}
+source("setup.R")
+```
+For the previous month, tabulate attendance for each Member, broken down by weekday, social, and holiday.  Holiday hours are any hours on a holiday -- a list of holiday dates is maintained by the GOC.  Social hours are hours on weekends that are not holidays.  Workday hours are hours on non-weekends that are not holidays.
+```{r dates}
+
+start_date <- floor_date(params$date, 'month')
+end_date <- ceiling_date(params$date, 'month') - days(1)
+```
+# Monthly Attendance Summary for `r format(start_date,"%B, %Y")`
+```{r summary}
+
+contacts <- get.contacts() %>%
+  filter(grepl("Member", c2_groups))
+
+summary <- get.attendance(days=65) %>%
+  filter(as_date(da_date_of_attendance) %within% (start_date %--% end_date)) %>%
+  inner_join(contacts, by = c("contact_2_id" = "id")) %>%
+  mutate(RowWorkDayHrs = ifelse(!(da_date_of_attendance %in% holidays) &
+    (wday(da_date_of_attendance) > 1 &
+      wday(da_date_of_attendance) < 7), da_total_hours, 0)) %>%
+  mutate(RowSocialHrs = ifelse(!(da_date_of_attendance %in% holidays) &
+    (wday(da_date_of_attendance) == 1 |
+      wday(da_date_of_attendance) == 7), da_total_hours, 0)) %>%
+  mutate(RowHolidayHrs = ifelse(da_date_of_attendance %in% holidays, da_total_hours, 0)) %>%
+  group_by(contact2_full_name) %>%
+  summarise(
+    WorkDayHrs = sum(RowWorkDayHrs), SocialHrs = sum(RowSocialHrs), HolidayHrs = sum(RowHolidayHrs),
+    TotalHrs = sum(da_total_hours)
+  ) %>%
+  bind_rows(summarise(., across(where(is.numeric), sum), across(where(is.character), ~"Total")))
+
+summary[which(summary[, "contact2_full_name"] == "Total"), 1] <-
+  paste("Totals for", nrow(summary[, "contact2_full_name"]) - 1, "Members")
+
+ft <- goc.table(summary, paste0("Monthly Attendance Summary for ", format(start_date, "%B, %Y")))
+ft
+```

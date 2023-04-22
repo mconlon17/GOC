@@ -1,0 +1,91 @@
+---
+title: "Support Types By Staff"
+output:
+  html_document:
+        css: "../styles/styles.css"
+params:
+  date: !r Sys.Date()
+---
+
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+```{r supports}
+
+supports <- get.supports() %>%
+    mutate(Year=year(flo_support_date))
+
+# ft <- goc.table(tail(supports),"Supports")
+# ft
+
+contacts <- get.contacts() %>%
+    filter(grepl("Staff", c2_groups)) %>%
+    mutate(Name = paste0(last_name, ", ", first_name))
+
+# ft <- goc.table(contacts,"Staff")
+# ft
+```
+# Week
+```{r week}
+start_date <- floor_date(as_date(params$date), "week")
+end_date <- min(today(), ceiling_date(as_date(params$date), "week") -1)
+
+tab <- supports %>%
+    inner_join(contacts, by=c("sa_contacts_2_id" = "id")) %>%
+    filter(as_date(flo_support_date) %within% (start_date %--% end_date)) %>%
+    group_by(flo_support_type, Name) %>%
+    tally() %>%
+    spread(Name,n) %>%
+    mutate(across(where(is.numeric), ~ ifelse(is.na(.),0,.) )) %>%
+    rename(`Support Type`=flo_support_type)
+
+ft <- goc.table(tab,paste0("Support Types By Staff from ", start_date, " to ", end_date))
+ft
+```
+# Month
+```{r month}
+start_date <- floor_date(as_date(params$date), "month")
+end_date <- min(today(), ceiling_date(as_date(params$date), "month") -1)
+
+tab <- supports %>%
+    inner_join(contacts, by=c("sa_contacts_2_id" = "id")) %>%
+    filter(as_date(flo_support_date) %within% (start_date %--% end_date)) %>%
+    group_by(flo_support_type, Name) %>%
+    tally() %>%
+    spread(Name,n) %>%
+    mutate(across(where(is.numeric), ~ ifelse(is.na(.),0,.) )) %>%
+    rename(`Support Type`=flo_support_type)
+
+ft <- goc.table(tab,paste0("Support Types By Staff from ", start_date, " to ", end_date))
+ft
+```
+# Year
+```{r year}
+start_date <- floor_date(as_date(params$date), "year")
+end_date <- min(today(), ceiling_date(as_date(params$date), "year") -1)
+
+tab <- supports %>%
+    inner_join(contacts, by=c("sa_contacts_2_id" = "id")) %>%
+    filter(as_date(flo_support_date) %within% (start_date %--% end_date)) %>%
+    group_by(flo_support_type, Name) %>%
+    tally() %>%
+    spread(Name,n) %>%
+    mutate(across(where(is.numeric), ~ ifelse(is.na(.),0,.) )) %>%
+    rename(`Support Type`=flo_support_type)
+
+ft <- goc.table(tab,paste0("Support Types By Staff from ", start_date, " to ", end_date))
+ft
+```
+# All
+```{r all}
+tab <- supports %>%
+    inner_join(contacts, by=c("sa_contacts_2_id" = "id")) %>%
+    group_by(flo_support_type, Name) %>%
+    tally() %>%
+    spread(Name,n) %>%
+    mutate(across(where(is.numeric), ~ ifelse(is.na(.),0,.) )) %>%
+    rename(`Support Type`=flo_support_type)
+
+ft <- goc.table(tab,"Support Types By Staff -- All")
+ft
+```

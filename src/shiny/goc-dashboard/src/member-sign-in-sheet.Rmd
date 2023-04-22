@@ -1,0 +1,43 @@
+---
+title: GOC Sign-In Sheet for `r params$date`
+output:
+  html_document:
+      css: "../styles/styles.css"
+params:
+    date: !r Sys.Date()+7
+---
+
+```{r setup,echo=FALSE,message=FALSE}
+source("setup.R")
+```
+```{r attendance}
+contacts <- get.contacts() %>%
+  mutate(Name = ifelse(!is.na(contact2_nickname) & contact2_nickname != "",paste0(last_name, ", ", first_name, ' "', contact2_nickname, '"'),paste(last_name, first_name, sep = ", "))) %>%
+  select(id, Name, c2_groups)
+
+tab <- get.attendance(days=90) %>%
+  mutate(Since = difftime(params$date, as.POSIXct(da_date_of_attendance), unit = "days")) %>%
+  group_by(contact_2_id) %>%
+  summarise(MostRecent = min(Since)) %>%
+  ungroup() %>%
+  left_join(contacts, by = c("contact_2_id" = "id")) %>%
+  filter(grepl("Member",c2_groups) | grepl("Staff", c2_groups) | grepl("Volunteer", c2_groups)) %>%
+  mutate(Signature = "", In = "", Out = "", In.2 = "", Out.2 = "", In.3 = "", Out.3 = "") %>%
+  select(Name, Signature, In, Out, In.2, Out.2, In.3, Out.3) %>%
+  arrange(Name) %>%
+  add_row(Name = ".", Signature = "", In = "", Out = "", In.2 = "", Out.2 = "", In.3 = "", Out.3 = "") %>%
+  add_row(Name = ".", Signature = "", In = "", Out = "", In.2 = "", Out.2 = "", In.3 = "", Out.3 = "") %>%
+  add_row(Name = ".", Signature = "", In = "", Out = "", In.2 = "", Out.2 = "", In.3 = "", Out.3 = "")
+
+ft <- flextable(tab) %>%
+  autofit() %>%
+  colformat_num(big.mark = "") %>%
+  align(part = "header", align = "center") %>%
+  width(j = seq(3, 8), width = 0.8) %>%
+  width(j = 2, width = 2.5) %>%
+  set_header_labels(In.2 = "In", Out.2 = "Out", In.3 = "In", Out.3 = "Out") %>%
+  set_caption(as_paragraph(as_chunk(paste0("Sign-in sheet for ", params$date),
+    props = fp_text_default(italic = T)
+  )))
+ft
+```

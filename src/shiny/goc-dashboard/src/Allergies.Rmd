@@ -1,0 +1,25 @@
+---
+title: Allergies
+output:
+    html_document:
+        css: "../styles/styles.css"
+---
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+```{r allergies}
+allergies <- get.members() %>%
+    filter(!str_detect(flo_allergies,"unknown") & !str_detect(flo_allergies,"none") & flo_allergies != "" & !is.na(flo_allergies)) %>%
+    mutate(flo_allergies = gsub(",", "A", flo_allergies)) %>%
+    mutate(flo_allergies = gsub("_", "B", flo_allergies)) %>%
+    mutate(flo_allergies = gsub("[[:punct:]]", "", flo_allergies)) %>%
+    mutate(flo_allergies = gsub("A", ", ", flo_allergies)) %>%
+    mutate(flo_allergies = gsub("B", "_", flo_allergies)) %>%
+    select(first_name, last_name, flo_allergies) %>%
+    arrange(last_name, first_name) %>%
+    rename(`First Name` = first_name, `Last Name` = last_name, `Allergies` = flo_allergies)
+
+ft <- goc.table(allergies,"Member Allergies")
+ft
+    
+```

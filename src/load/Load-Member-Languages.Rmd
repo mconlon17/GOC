@@ -1,0 +1,82 @@
+---
+title: "Load Member primary Languages"
+output:
+  html_document:
+    css: "../../styles/styles.css"
+---
+```{r setup,echo=F,message=F,warning=F}
+source("../setup.R")
+```
+```{r flourish}
+# Get languages from Applistic data
+
+members <- get.members(include.deleted = T)
+
+languages <- read_csv("../../data/applistic-final/people.csv", col_types = list(
+  Race3 = "c", ProviderTitle = "c", ProviderSuffix = "c",
+  Referral = "c", Race8 = "c", Race9 = "c", Race12 = "c", Race13 = "c",
+  Race14 = "c", StaffIDNumber = "c"
+)) %>%
+  mutate(PersonID = as.character(PersonID)) %>%
+  mutate(Member = Member == "Member") %>%
+  mutate(Member = Member & !is.na(Member)) %>%
+  filter(Member) %>%
+  select(PersonID, PrimaryLanguage, SecondaryLanguage)
+
+# nrow(languages)
+#
+# ft <- goc.table(languages,paste("Updating languages",today()))
+# ft
+
+
+languages <- members %>%
+  left_join(languages, by = c("flo_external_id1_c" = "PersonID")) %>%
+  select(id, first_name, last_name, flo_primary_language_c, flo_secondary_language_c, PrimaryLanguage, SecondaryLanguage) %>%
+  mutate(CurrentPrimaryLanguage = flo_primary_language_c) %>%
+  mutate(CurrentSecondaryLanguage = flo_secondary_language_c) %>%
+  mutate(flo_primary_language_c = ifelse(flo_primary_language_c == "" |
+    is.na(flo_primary_language_c) | flo_primary_language_c == "Unknown", PrimaryLanguage, flo_primary_language_c)) %>%
+  mutate(flo_secondary_language_c = ifelse(flo_secondary_language_c == "" |
+    is.na(flo_secondary_language_c) | flo_secondary_language_c == "Unknown", SecondaryLanguage, flo_secondary_language_c)) %>%
+  mutate(date_modified = now()) %>%
+  mutate(modified_user_id = "4cde6014-5735-b6a8-2975-63e1844134be") %>%
+  select(
+    id, first_name, last_name, PrimaryLanguage, CurrentPrimaryLanguage,
+    flo_primary_language_c, SecondaryLanguage, CurrentSecondaryLanguage, flo_secondary_language_c, modified_user_id, date_modified
+  )
+
+nrow(languages)
+
+ft <- goc.table(languages, paste("Updating languages", today()))
+ft
+```
+``` {r do-update}
+# Make a database connection to Flourish
+
+con <- dbConnect(RMySQL::MySQL(),
+                       dbname = "gainesvillecrm",
+                       host = "3.136.184.221",
+                       port = 3306,
+                       user = "mikeconlon",
+                       password = "c8g8*uKkm4s4NM")
+
+# Allow Tables to be loaded from R
+
+dbSendQuery(con, "SET GLOBAL local_infile = true;")
+
+# Create temporary table
+
+# dbSendQuery(con, 'DROP TABLE temp_members_update;')
+dbWriteTable(con, value = languages, name = 'temp_members_update', append = F, row.names = F)
+
+dbSendQuery(con, 'UPDATE contacts
+                     INNER JOIN temp_members_update ON
+                         contacts.id = temp_members_update.id
+                     SET contacts.date_modified = temp_members_update.date_modified,
+                         contacts.modified_user_id = temp_members_update.modified_user_id,
+                         contacts.flo_secondary_language_c = temp_members_update.flo_secondary_language_c,
+                         contacts.flo_primary_language_c = temp_members_update.flo_primary_language_c;')
+
+dbSendQuery(con, 'DROP TABLE temp_members_update;')
+dbDisconnect(con)
+```

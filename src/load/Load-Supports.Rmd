@@ -1,0 +1,187 @@
+---
+title: "Load Supports from Applistic"
+header-includes:
+- \usepackage{pdflscape}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
+output:
+  html_document: default
+  word_document: 
+    reference_docx: word-styles.docx
+    keep_md: yes
+  pdf_document: default
+---
+
+```{r setup,echo=F,message=F,warning=F}
+knitr::opts_chunk$set(echo=FALSE, message=FALSE,warning=FALSE,fig.width=14)
+load("~/Documents/GOC/.RData")
+library(knitr)
+library(rmarkdown)
+library(tidyverse)
+library(kableExtra)
+library(lubridate)
+library(stringr)
+library(RMySQL)
+library(flextable)
+library(uuid)
+previous_month <- rollback(today()-months(1),roll_to_first =TRUE) %--% rollback(today())
+set_flextable_defaults(font.size = 10, theme_fun = theme_zebra, padding = 6, background.color = "#EFEFEF")
+```
+# Extract, Transform and Load.  From Applistic to Flourish.  Intended for one-time use.
+
+```{r extract_applistic_supports}
+
+applistic.supports <- read_csv("../data/applistic-final/support_events.csv") %>%
+
+    # outreach is outreach, not support
+    
+    mutate(SupportType=ifelse(SupportType=="Other Outreach","Outreach",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="U.S. Mail","Outreach",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Visit - Home","Outreach",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Visit - Respite","Outreach",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Face to Face Outreach","Outreach",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Email","Outreach",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Telephone","Outreach",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="SMS Text","Outreach",SupportType)) %>%
+    
+    filter(SupportType != "Outreach") %>%
+
+    # Now we can recode supports
+
+    mutate(SupportType=ifelse(SupportType=="Tutoring","Education_in_house",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Legal","Referral",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Pre-employment Support","Employment_readiness",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Tutoring","Education_in_house",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Legal","Referral",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Substance Abuse","Referral",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Newsletter","Media",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Entitlements","Benefits",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Database","Education_in_house",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Computer Support","Education_in_house",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Formal Education","Education_post_enrollment",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Informal Education","Education_in_house",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Pre-Employment Support","Employment_readiness",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Medical/Dental","Transportation_health",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Transportation","Transportation_goc",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Virtual Meeting","Work_ordered_day",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Employment - All types","Employment_readiness",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Employment (IE)","Employment_IE",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Employment (TE)","Employment_TE",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Employment (SE)","Employment_SE",SupportType)) %>%
+    mutate(SupportType=ifelse(SupportType=="Miscellaneous","Work_ordered_day",SupportType)) %>%
+    
+    # Reshape to names, datatypes, and columns of interest
+        
+    rename(StaffID=ProviderID,DateModified=LastUpdate) %>%
+    mutate(DateRecCreated=mdy(DateRecCreated),Date=dmy(Date)) %>%
+    mutate(StaffID=as.character(StaffID)) %>%
+    select(SupportID,StaffID,SupportType,NumberSupported,Notes,Date,DurationMinutes,DateModified,DateRecCreated)
+
+applistic.supports
+
+ft <- goc.table(tail(applistic.supports,n=40),"From Applistic, recoded")
+ft
+
+tab <- applistic.supports %>%
+    group_by(SupportType) %>%
+    tally()
+ft <- goc.table(tab,"Support Types")
+ft
+```
+
+```{r join-staff-to-supports}
+# Get the contacts from Flourish
+con <- dbConnect(RMySQL::MySQL(),
+                       dbname = "gainesvillecrm",
+                       host = "3.136.184.221",
+                       port = 3306,
+                       user = "mikeconlon",
+                       password = "c8g8*uKkm4s4NM")
+
+contacts <- dbGetQuery(con, "SELECT * FROM sa_contacts_2") %>%
+    rename(sa_contacts_2_id=id) %>%
+    select(first_name,last_name,sa_contacts_2_id,contact2_applistic_number)
+
+x <- dbDisconnect(con)
+
+# Renumber goes here
+
+staff <-data.frame(StaffName=c("Brett","Maggie","Kyanna","Nakeshia","Cristina","Sandy","Brett","Maggie","Rose Ann","Robert",
+                               "Kaitlyn","Mia","Kaitlyn","Paul","Deidra","Cristina","Kalya","Ouida","Roscoe","Jeff",
+                               "Debbie","Brian","Jill","Fey","Chris","Luis","Kerry","Joseph","Robert","Barry"),
+                  OldID=c("1469","1540","1633","1715","1729","1733","1822","1874","1964","1968",
+                          "2026","2072","2074","2100","2076","1655","1997","1698","1425","664",
+                          "1269","674","1326","1126","1154","1329","1408","312","625","649"),
+                  NewID=c("3835","4038","1633","1715","3796","1733","3835","4038","1964","4039",
+                          "4651","4553","4651","2100","4641","3796","3212","3907","3410","4336",
+                          "4200","4025","3185","3998","4206","3603","3508","3837","3958","4130"))
+
+contacts <- contacts %>%
+    left_join(staff,by=c("contact2_applistic_number"="NewID")) %>%
+    mutate(contact2_applistic_number = ifelse(!is.na(contact2_applistic_number),
+                                              OldID,contact2_applistic_number)) %>%
+    filter(!is.na(contact2_applistic_number))
+    
+contacts[,c("first_name","last_name","contact2_applistic_number", "sa_contacts_2_id")]
+
+supports <- applistic.supports %>%
+    left_join(contacts,by=c("StaffID"="contact2_applistic_number"))
+
+ft <- goc.table(tail(supports,n=100), "With contact ID")
+ft
+```
+
+```{r join-members-to-outreach}
+```
+
+```{r transform_supports}
+
+transformed.supports <- supports %>%
+  
+    mutate(id = UUIDgenerate(n=n())) %>%
+    mutate(name = paste0("Support-",seq(1,n()))) %>%
+    mutate(date_entered = Sys.time()) %>%
+    mutate(date_modified = Sys.time()) %>%
+    mutate(modified_user_id = "4cde6014-5735-b6a8-2975-63e1844134be") %>% # UUID for Mike Conlon
+    mutate(created_by = "4cde6014-5735-b6a8-2975-63e1844134be") %>%
+    mutate(description = "") %>%
+    mutate(deleted = 0) %>%
+    mutate(assigned_user_id = "") %>%
+  
+    rename(flo_support_date = Date) %>%
+    rename(flo_support_type = SupportType) %>%
+    rename(flo_support_note = Notes) %>%
+    rename(flo_support_duration = DurationMinutes) %>%
+    mutate(support_autoincrement = seq(1:n())) %>%
+    mutate(person1_c=sa_contacts_2_id)
+
+    select(id,date_entered,date_modified,modified_user_id,created_by,description,deleted,assigned_user_id,
+           sa_contacts_2_id,
+           flo_support_date,flo_support_type,flo_support_note,flo_support_duration,support_autoincrement)
+
+ft <- goc.table(tail(transformed.supports,n=100),"Ready to load")
+ft
+write_csv(transformed.supports,file="../output/transformed-supports.csv")
+```
+
+# Connect to Flourish and write the supports data to Flourish
+```{r load_supports}
+
+# Make a database connection to Flourish
+con <- dbConnect(RMySQL::MySQL(),
+                       dbname = "gainesvillecrm",
+                       host = "3.136.184.221",
+                       port = 3306,
+                       user = "mikeconlon",
+                       password = "c8g8*uKkm4s4NM")
+
+# Allow Tables to be loaded from R
+dbSendQuery(con, "SET GLOBAL local_infile = true;")
+
+# Load supports to Flourish replacing whatever is there. value is R, name is remote table
+
+dbGetQuery(con,"DELETE FROM flo_supports;")
+dbWriteTable(con, value = transformed.supports, name = 'flo_supports', append = T, row.names = F)
+
+dbDisconnect(con)
+```

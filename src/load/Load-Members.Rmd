@@ -1,0 +1,163 @@
+---
+title: "Load Members"
+header-includes:
+- \usepackage{pdflscape}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
+output:
+  html_document: default
+  word_document: 
+    reference_docx: word-styles.docx
+    keep_md: yes
+  pdf_document: default
+---
+
+```{r setup,echo=F,message=F,warning=F}
+knitr::opts_chunk$set(echo=FALSE, message=FALSE,warning=FALSE,fig.width=14)
+load("~/Documents/GOC/.RData")
+library(knitr)
+library(rmarkdown)
+library(tidyverse)
+library(kableExtra)
+library(lubridate)
+library(stringr)
+library(RMySQL)
+library(flextable)
+library(uuid)
+previous_month <- rollback(today()-months(1),roll_to_first =TRUE) %--% rollback(today())
+holidays<-ymd(list("2022-01-17", "2022-05-30", "2022-06-20", "2022-07-04", "2022-09-05", 
+                   "2023-01-16", "2023-05-29", "2023-06-16", 
+                   "2023-07-04", "2023-09-04", "2023-10-09", "2023-11-10", "2023-11-23", "2023-11-24", "2023-12-25"))
+ make_DT <- function(date,time_string) {
+  # Given a date and a time string of the kind we see in contacts data, return a datetime
+  d <- date
+  hour(d)<-as.integer(substring(time_string,1,2))
+  minute(d)<-as.integer(substring(time_string,4,5))
+  d
+ }
+ set_flextable_defaults(
+  font.size = 10, theme_fun = theme_zebra,
+  padding = 6,
+  background.color = "#EFEFEF")
+```
+# Extract, Transform and Load.  From Applistic to Flourish.  Intended for one-time use.
+
+This is the first load script.  Member UUIDs are used in other loads to reference Members (goals&plans, support, progress notes). Members
+are loaded before contacts, because Members must then be loaded into Contacts.  Flourish starts with Members.
+```{r extract_members}
+members <- read_csv("../data/applistic/people.csv", col_types = list(Race3="c",ProviderTitle="c",ProviderSuffix="c",
+                                                             Referral="c",Race8="c",Race9="c",Race12="c",Race13="c",
+                                                             Race14="c", StaffIDNumber="c")) %>%
+  mutate(Member=Member=="Member") %>% mutate(Member = Member & !is.na(Member)) %>%
+  mutate(Other= !Member & !Staff) %>%
+  filter(PersonID != 1974) %>%
+  rows_update(tibble(PersonID=2,Staff=F),by="PersonID") %>% # Jeff Lander was never an employee
+  mutate(PersonType=ifelse(Member,"Member",ifelse(Staff,"Staff","Other"))) %>%
+  mutate(DateRecCreated=mdy(DateRecCreated)) %>%
+  mutate(Year=year(DateRecCreated)) %>%
+  filter(PersonType=="Member")
+members
+```
+# Tranform Members
+
+There are many columns.  Not all are used by GOC.  Not all are populated in Applistic.  We will transform those of interest for loading to Flourish.
+We will likely transform in batches or slices, adding more relevant variables as we go.
+
+First interest is contact information.
+```{r transform_members}
+##   [1] "id"                             "date_entered"                  
+##   [3] "date_modified"                  "modified_user_id"              
+##   [5] "created_by"                     "description"                   
+##   [7] "deleted"                        "assigned_user_id"              
+##   [9] "salutation"                     "first_name"                    
+##  [11] "last_name"                      "photo"                         
+##  [13] "do_not_call"                    "phone_home"                    
+##  [15] "phone_mobile"                   "phone_work"                    
+##  [17] "phone_other"                    "primary_address_street"        
+##  [19] "primary_address_city"           "primary_address_state"         
+##  [21] "primary_address_postalcode"     "primary_address_country"       
+##  [23] "reports_to_id"                  "birthdate"                     
+##  [25] "campaign_id"                    "portal_account_disabled"       
+##  [27] "portal_user_type"               "flo_transportation_mode_c"     
+##  [29] "flo_housing_comments"           "flo_highest_grade_completed"   
+##  [31] "flo_degrees_certificates"       "flo_education_comments"        
+##  [33] "flo_ever_employed"              "flo_last_employment"           
+##  [35] "flo_employment_comments"        "flo_annual_income"             
+##  [37] "flo_food_stamps"                "flo_ssi"                       
+##  [39] "flo_ssdi"                       "flo_housing_voucher"           
+##  [41] "agency_id_c"                    "flo_agency_comments"           
+##  [43] "flo_diagnosis_comments"         "flo_accessibility_restrictions"
+##  [45] "referral_source_id_c"           "refererr_id_c"                 
+##  [47] "flo_resume_link"                "flo_application_link"          
+##  [49] "flo_release_link"               "flo_emergency_release"         
+##  [51] "flo_information_release"        "flo_media_release"             
+##  [53] "flo_application_date"           "member_address_street"         
+##  [55] "member_address_street_2"        "member_address_street_3"       
+##  [57] "member_address_city"            "member_address_state"          
+##  [59] "member_address_postalcode"      "member_address_country"        
+##  [61] "emergency_address_street"       "emergency_address_city"        
+##  [63] "emergency_address_state"        "emergency_address_postalcode"  
+##  [65] "emergency_address_country"      "flo_nickname_preferred_name_c" 
+##  [67] "flo_middle_name_c"              "flo_preferred_pronouns_c"      
+##  [69] "flo_preferred_language_c"       "flo_unit_chosen_by_member_c"   
+##  [71] "flo_membership_status_c"        "flo_approved_contact_methods_c"
+##  [73] "flo_preferred_phone_c"          "flo_phone_number_4_c"          
+##  [75] "flo_phone_number_5_c"           "flo_race_c"                    
+##  [77] "flo_ethnicity_hispanic_c"       "flo_gender_identity_c"         
+##  [79] "flo_gender_at_birth_c"          "flo_type_young_adults_c"       
+##  [81] "flo_type_senior_citizen_c"      "flo_considered_veteran_c"      
+##  [83] "flo_considered_lgbt_c"          "flo_marital_status_c"          
+##  [85] "flo_housing_status_c"           "flo_highest_level_of_educati_c"
+##  [87] "flo_billing_code_c"             "flo_deceased_c"                
+##  [89] "flo_external_id1_c"             "flo_external_id2_c"            
+##  [91] "flo_emergency_contact_c"        "flo_emergency_con_phone_c"     
+##  [93] "contact_id_c"                   "contact_autoincrement"         
+##  [95] "contact_flourish_number"        "flo_contact_record_type_c"     
+##  [97] "avg_time_at_ch"                 "flo_race_mult"                 
+##  [99] "flo_preferred_pronouns_dd"      "flo_primary_language_c"        
+## [101] "flo_secondary_language_c"       "flo_preferred_contact_methods" 
+## [103] "flo_diagnoses_mult"             "flo_allergies"                 
+## [105] "flo_primary_phone"              "flo_secondary_phone"           
+## [107] "flo_email_opt_out_c"            "flo_mail_opt_out_c"            
+## [109] "birthday_month"                 "age"
+
+#
+#  To add variables, likely will pull members from Flourish, tack on columns from Applistic and push the whole thing back in.
+#
+
+# transformed.members <- members %>%
+#     mutate(id = UUIDgenerator(n=n()) %>%
+#     mutate(date_entered = now()) %>%
+#     mutate(date_modified = now()) %>%
+#     mutate(name = paste0("Member-",seq(1,n()))) %>%
+#     select(id,name,date_entered,date_modified)
+# ft <- flextable(head(transformed.members)) %>% autofit()
+# ft
+```
+
+# Connect to Flourish and write the members data to Flourish.
+
+Members are written to "contacts" in Flourish.  Flourish was a born as a CRM and contacts is the central file.
+
+(Our "contacts" -- mostly donors, vendors, prospects are in a separate file.  Members are also contacts)
+```{r load_members}
+
+# # Make a database connection to Flourish
+# con <- dbConnect(RMySQL::MySQL(),
+#                        dbname = "gainesville_db",
+#                        host = "3.136.184.221",
+#                        port = 3306,
+#                        user = "mikeconlon",
+#                        password = "c8g8*uKkm4s4NM")
+# 
+# # Allow Tables to be loaded from R
+# dbSendQuery(con, "SET GLOBAL local_infile = true;")
+# 
+# # Load members to Flourish replacing whatever is there. value is R, name is remote table
+# dbWriteTable(con, value = transformed.members, name = 'contacts_test', append = T, row.names = F)
+# 
+# # Drop the test table
+# # dbSendQuery(con, "DROP TABLE contacts_test")
+# 
+# dbDisconnect(con)
+```

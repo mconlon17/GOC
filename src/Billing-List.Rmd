@@ -1,0 +1,82 @@
+---
+title: Billing run date `r Sys.Date()`
+output:
+  html_document:
+      css: "../styles/styles.css"
+params:
+  date: !r Sys.Date()-6
+---
+```{r setup,echo=FALSE,message=F,warning=F}
+source("setup.R")
+```
+```{r previous}
+start_date <- floor_date(as_date(params$date), "month")
+end_date <- as_date(params$date)
+
+ndays <- as.integer(as_date(Sys.Date())-as_date(start_date)) +1
+
+members <-get.contacts() %>%
+    filter(grepl("Member",c2_groups)) %>%
+    mutate(Name=paste(last_name,first_name,sep=", ")) %>%
+    select(id, Name)
+
+# ft <- goc.table(members)
+# ft
+
+staff <- get.contacts() %>%
+    filter(grepl("Staff",c2_groups)) %>%
+    mutate(Name=paste(last_name,first_name,sep=", ")) %>%
+    select(id,Name)
+
+# ft <- goc.table(staff)
+# ft
+
+member.attendance <- get.attendance(days=ndays) %>%
+    filter(as_date(da_date_of_attendance) %within% (start_date %--% end_date)) %>%
+    inner_join(members,by=c("contact_2_id"="id")) %>%
+    select(Name,contact_2_id,da_date_of_attendance,da_time_in,da_time_out) %>%
+    arrange(da_date_of_attendance)
+
+# ft <- goc.table(member.attendance)
+# ft
+
+staff.attendance <- get.attendance() %>%
+    filter(as_date(da_date_of_attendance) %within% (start_date %--% end_date)) %>%
+    inner_join(staff,by=c("contact_2_id"="id")) %>%
+    mutate(StaffPresent = da_time_in %--% da_time_out) %>%
+    select(Name,contact_2_id,da_date_of_attendance,StaffPresent) %>%
+    arrange(Name, StaffPresent)
+
+# ft <- goc.table(staff.attendance)
+# ft
+
+member.intervals <- member.attendance %>%
+  group_by(da_date_of_attendance) %>%
+  summarise(MembersPresent = min(da_time_in, na.rm=T) %--% max(da_time_out, na.rm=T))
+
+# ft <- goc.table(member.intervals)
+# ft
+```
+
+```{r billing}
+
+bill.intervals <- staff.attendance %>%
+
+    inner_join(member.intervals,by="da_date_of_attendance") %>%
+    mutate(BillInterval= make_intersection_v(StaffPresent,MembersPresent)) %>%
+    mutate(Hours=floor(BillInterval/dhours(1))) %>%
+    mutate(Minutes=BillInterval/dminutes(1)-60*Hours) %>%
+    mutate(Start=format(int_start(BillInterval),"%I:%M %p")) %>%
+    mutate(End=format(int_end(BillInterval),"%I:%M %p")) %>%
+    rename(Date=da_date_of_attendance) %>%
+    mutate(TotalMinutes=60*Hours+Minutes) %>%
+
+    select(Name,Date,Start,End,`Total Minutes` = TotalMinutes) %>%
+    arrange(Date,Name)
+
+ft <- goc.table(bill.intervals,paste0("From ",start_date, " to ", end_date))
+ft
+
+```
+
+

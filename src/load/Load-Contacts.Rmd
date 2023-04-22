@@ -1,0 +1,222 @@
+---
+title: "Load Contacts from Applistic and AirTable"
+header-includes:
+- \usepackage{pdflscape}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
+output:
+  html_document: default
+  word_document: 
+    reference_docx: word-styles.docx
+    keep_md: yes
+  pdf_document: default
+---
+
+```{r setup,echo=F,message=F,warning=F}
+knitr::opts_chunk$set(echo=FALSE, message=FALSE,warning=FALSE,fig.width=14)
+load("~/Documents/GOC/.RData")
+library(knitr)
+library(rmarkdown)
+library(tidyverse)
+library(kableExtra)
+library(lubridate)
+library(stringr)
+library(RMySQL)
+library(flextable)
+library(uuid)
+previous_month <- rollback(today()-months(1),roll_to_first =TRUE) %--% rollback(today())
+holidays<-ymd(list("2022-01-17", "2022-05-30", "2022-06-20", "2022-07-04", "2022-09-05", 
+                   "2023-01-16", "2023-05-29", "2023-06-16", 
+                   "2023-07-04", "2023-09-04", "2023-10-09", "2023-11-10", "2023-11-23", "2023-11-24", "2023-12-25"))
+ make_DT <- function(date,time_string) {
+  # Given a date and a time string of the kind we see in contacts data, return a datetime
+  d <- date
+  hour(d)<-as.integer(substring(time_string,1,2))
+  minute(d)<-as.integer(substring(time_string,4,5))
+  d
+ }
+ set_flextable_defaults(
+  font.size = 10, theme_fun = theme_zebra,
+  padding = 6,
+  background.color = "#EFEFEF")
+```
+# Extract, Transform and Load.  From Applistic to Flourish.  Intended for one-time use.
+
+1. Extract contacts from Applistic.  Format for Flourish 
+2. Extract contacts from AirTable. Format for Flourish
+3. Combine the two datasets.  For Member data favor Applistic.  For others favor AirTable.
+4. Prepare the combined dataset for Flourish
+5. Map to Fourish variables
+6. Load to a test dataset
+
+```{r extract_applistic_contacts}
+applistic.contacts <- read_csv("../data/applistic-final/people.csv", col_types = list(Race3="c",ProviderTitle="c",ProviderSuffix="c",
+                                                             Referral="c",Race8="c",Race9="c",Race12="c",Race13="c",
+                                                             Race14="c", StaffIDNumber="c")) %>%
+  mutate(Member=Member=="Member") %>% mutate(Member = Member & !is.na(Member)) %>%
+  mutate(Other= !Member & !Staff) %>%
+  mutate(FullName=paste(ifelse(is.na(PersonTitle),"",PersonTitle),
+                    ifelse(is.na(FirstName),"",FirstName),
+                    ifelse(is.na(MiddleName),"",MiddleName),
+                    ifelse(is.na(LastName),"",LastName),
+                    ifelse(is.na(NameSuffix),"",NameSuffix))) %>%
+  filter(PersonID != 1974) %>%
+  rows_update(tibble(PersonID=2,Staff=F),by="PersonID") %>% # Jeff Lander was never an employee
+  rename(Nickname=NickName) %>%
+  mutate(PersonType=ifelse(Member,"Member",ifelse(Staff,"Staff","Other"))) %>%
+  mutate(Notes=ContactNotes) %>%
+  mutate(Country="US",Salutation="") %>%
+  mutate(DateRecCreated=mdy(DateRecCreated)) %>%
+  mutate(Groups="") %>%
+  mutate(Solicit=TRUE) %>%
+  mutate(ContactType="Person") %>%
+  mutate(Groups= ifelse(Board, paste0("^GOC Board Member^,",Groups), Groups)) %>%
+  mutate(Groups= ifelse(CaseMngr, paste0("^Case Manager^,",Groups), Groups)) %>%
+  mutate(Groups= ifelse(Member, paste0("^GOC Member^,",Groups), Groups)) %>%
+  mutate(Groups= ifelse(Staff, paste0("^GOC Staff^,",Groups), Groups)) %>%
+  mutate(Groups= ifelse(Volunteer, paste0("^GOC Volunteer^,",Groups), Groups)) %>%
+  select(PersonID,ContactType,FullName,Salutation,FirstName,LastName,Nickname,Groups,StreetAddress,City,State,ZipCode,Country,PhoneNumber,CellPhone,
+         WorkPhone,Email,Email2,Solicit,Notes) %>%
+  arrange(LastName,FirstName)
+applistic.contacts
+ft<-flextable(head(applistic.contacts)) %>% autofit()
+ft
+```
+
+```{r extract_airtable_contacts}
+airtable.contacts <- read_csv("../data/airtable/Contacts-All Contacts.csv") %>%
+    mutate(PersonID=seq(from=3000,length.out=n())) %>%
+    mutate(Solicit=(ifelse(Solicit=="checked",T,F))) %>%
+    rename(FirstName=`First Name`,LastName=`Last Name`,PhoneNumber=Phone,ContactType=`Contact Type`,FullName=Name) %>%
+    mutate(CellPhone="", WorkPhone="", Email2="", Nickname="") %>%
+    rename(GroupsString=Groups) %>%
+    mutate(GroupsString=ifelse(grepl(",Member,",GroupsString),paste0("GOC Member,",GroupsString),GroupsString)) %>%
+    mutate(GroupsString=ifelse(GroupsString=="Member","GOC Member",GroupsString)) %>%
+    mutate(GroupsString=ifelse(startsWith(GroupsString,"Member,"),paste0("GOC Member,",GroupsString),GroupsString)) %>%
+    mutate(Groups="") %>%
+    mutate(Groups= ifelse(grepl("FCC",GroupsString), paste0("^FCC^,",Groups), Groups)) %>%
+    mutate(Groups= ifelse(grepl("GOC Member",GroupsString), paste0("^GOC Member^,",Groups), Groups)) %>%
+    mutate(Groups= ifelse(grepl("Donor",GroupsString), "^Donor^", Groups)) %>%
+    mutate(Groups= ifelse(grepl("Rotary",GroupsString), paste0("^Rotary^,",Groups), Groups)) %>%
+    mutate(Groups= ifelse(grepl("GOC Board Member",GroupsString), paste0("^GOC Board Member^,",Groups), Groups)) %>%
+    mutate(Groups= ifelse(grepl("GOC Staff",GroupsString), paste0("^GOC Staff^,",Groups), Groups)) %>%
+    mutate(Groups= ifelse(grepl("GOC Volunteer",GroupsString), paste0("^GOC Volunteer^,",Groups), Groups)) %>%
+    mutate(Groups= ifelse(grepl("Mental Health",GroupsString), paste0("^Mental Health^,",Groups), Groups)) %>%
+    mutate(Groups= ifelse(grepl("Vendor",GroupsString), paste0("^Vendor^,",Groups), Groups)) %>%
+    mutate(Groups= ifelse(grepl("Deceased",GroupsString), paste0("^Deceased^,",Groups), Groups)) %>%
+    mutate(Groups= ifelse(grepl("Former Board Member",GroupsString), paste0("^Former GOC Board Member^,",Groups), Groups)) %>%
+    mutate(Groups= ifelse(grepl("Former Staff",GroupsString), paste0("^Former GOC Staff^,",Groups), Groups)) %>%
+    mutate(Groups= ifelse(grepl("Newsletter",GroupsString), paste0("^Newsletter^,",Groups), Groups)) %>%
+    select(PersonID,ContactType,FullName,Salutation,FirstName,LastName,Nickname,Groups,StreetAddress,City,State,ZipCode,Country,PhoneNumber,CellPhone,
+           WorkPhone,Email,Email2,Solicit,Notes) %>%
+    arrange(LastName, FirstName)
+airtable.contacts
+# ft<-flextable(head(airtable.contacts)) %>% autofit()
+# ft
+```
+
+```{r combine_contacts}
+applistic.contacts.members <- applistic.contacts %>% filter(grepl("GOC Member",Groups))
+applistic.contacts.members
+airtable.contacts.not_members <- airtable.contacts %>% filter(!grepl("GOC Member",Groups)==T)
+airtable.contacts.not_members
+applistic.contacts.other <- applistic.contacts %>% filter(!grepl("GOC Member",Groups)==T) %>% anti_join(airtable.contacts.not_members,by=c("FirstName","LastName")) %>% arrange(PersonID)
+applistic.contacts.other
+contacts <- applistic.contacts.members %>% bind_rows(airtable.contacts.not_members) %>% bind_rows(applistic.contacts.other) %>% arrange(PersonID)
+contacts
+write_csv(contacts,file="../output/untransformed-contacts.csv")
+```
+
+```{r transform_contacts}
+##  [1] "id"                         "date_entered"              
+##  [3] "date_modified"              "modified_user_id"          
+##  [5] "created_by"                 "description"               
+##  [7] "deleted"                    "assigned_user_id"          
+##  [9] "salutation"                 "first_name"                
+## [11] "last_name"                  "photo"                     
+## [13] "do_not_call"                "phone_home"                
+## [15] "phone_mobile"               "phone_work"                
+## [17] "phone_other"                "primary_address_street"    
+## [19] "primary_address_city"       "primary_address_state"     
+## [21] "primary_address_postalcode" "primary_address_country"   
+## [23] "c2_groups"                  "c2_address_street"         
+## [25] "c2_address_street_3"        "c2_address_city"           
+## [27] "c2_address_state"           "c2_address_postalcode"     
+## [29] "c2_address_country"         "c2_primary_phone"          
+## [31] "c2_secondary_phone"         "c2_address_street_2"       
+## [33] "c2_contact_record_type_c"   "c2_salutation"
+transformed.contacts <- contacts %>%
+    mutate(id = UUIDgenerate(n=n())) %>%
+    mutate(date_entered = now()) %>%
+    mutate(date_modified = now()) %>%
+    mutate(modified_user_id = "") %>%
+    mutate(created_by = "") %>%
+    mutate(description = "") %>%
+    mutate(deleted = FALSE) %>%
+    mutate(assigned_user_id = "") %>%
+  
+    mutate(salutation = "") %>%
+    mutate(first_name = FirstName) %>%
+    mutate(last_name = LastName) %>%
+    mutate(photo = "") %>%
+    mutate(do_not_call=F) %>%
+    mutate(phone_home = PhoneNumber) %>%
+    mutate(phone_mobile = CellPhone) %>%
+    mutate(phone_work = "") %>%
+    mutate(phone_other = "") %>%
+    
+    mutate(primary_address_street=StreetAddress) %>%
+    mutate(primary_address_city=City) %>%
+    mutate(primary_address_state=State) %>%
+    mutate(primary_address_postalcode=ZipCode) %>%
+    mutate(primary_address_country=Country) %>%
+    
+    mutate(c2_groups=Groups) %>%
+    mutate(c2_address_street=StreetAddress) %>%
+    mutate(c2_address_street_3="") %>%
+    mutate(c2_address_city=City) %>%
+    mutate(c2_address_state=State) %>%
+    mutate(c2_address_postalcode=ZipCode) %>%
+    mutate(c2_address_country=Country) %>%
+    mutate(c2_primary_phone=PhoneNumber) %>%
+    mutate(c2_secondary_phone=CellPhone) %>%
+    mutate(c2_address_street_2="") %>%
+    mutate(c2_contact_record_type_c=ContactType) %>%
+    mutate(c2_salutation=Salutation) %>%
+  
+    mutate(c2_person_id=PersonID) %>%
+    mutate(c2_full_name=FullName) %>%
+    mutate(c2_nickname=Nickname) %>%
+  
+    select(id,date_entered,date_modified,modified_user_id,created_by,description,deleted,assigned_user_id,salutation,
+           first_name,last_name,photo,do_not_call,phone_home,phone_mobile,phone_work,phone_other,primary_address_street,
+           primary_address_city,primary_address_state,primary_address_postalcode,primary_address_country,c2_groups,
+           c2_address_street,c2_address_street_3,c2_address_city,c2_address_state,c2_address_postalcode,c2_address_country,
+           c2_primary_phone,c2_secondary_phone ,c2_address_street_2,c2_contact_record_type_c,c2_salutation,c2_person_id,
+           c2_full_name,c2_nickname)
+
+ft <- flextable(head(transformed.contacts)) %>% autofit()
+ft
+write_csv(transformed.contacts,file="../output/transformed-contacts.csv")
+```
+
+# Connect to Flourish and write the contacts data to Flourish
+```{r load_contacts}
+
+# # Make a database connection to Flourish
+# con <- dbConnect(RMySQL::MySQL(),
+#                        dbname = "gainesvillecrm",
+#                        host = "3.136.184.221",
+#                        port = 3306,
+#                        user = "mikeconlon",
+#                        password = "c8g8*uKkm4s4NM")
+# 
+# # Allow Tables to be loaded from R
+# dbSendQuery(con, "SET GLOBAL local_infile = true;")
+# 
+# # Load contacts to Flourish replacing whatever is there. value is R, name is remote table
+# dbWriteTable(con, value = transformed.contacts, name = 'contacts_test', append = T, row.names = F)
+# 
+# 
+# dbDisconnect(con)
+```

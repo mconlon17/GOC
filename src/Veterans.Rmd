@@ -1,0 +1,21 @@
+---
+title: Veterans
+output:
+    html_document:
+        css: "../styles/styles.css"
+---
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+```{r allergies}
+veterans <- get.members() %>%
+    filter(flo_considered_veteran_c == "Yes") %>%
+
+arrange(last_name, first_name) %>%
+select(first_name, last_name, flo_considered_veteran_c) %>%
+rename(`First Name` = first_name, `Last Name` = last_name, `Veteran` = flo_considered_veteran_c)
+
+ft <- goc.table(veterans,paste0(nrow(veterans), " Veterans"))
+ft
+    
+```

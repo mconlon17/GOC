@@ -1,0 +1,56 @@
+---
+title: Flourish Record Counts
+output: 
+    html_document:
+        css: "../styles/styles.css"
+params:
+    date: !r Sys.Date()
+---
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+```{r flourish}
+tables <- c(
+  "contacts", "sa_contacts_2", "flo_gifts", "sa_flourish_daily_attendance", "sa_goals", "flo_supports",
+  "flo_progress_notes", "sa_flourish_reach_out", "sa_employment", "users"
+)
+
+table.names <- c("Members", "Contacts", "Gifts", "Attendance", "Goals & Plans", "Supports", "Progress Notes", "Outreach", "Employment", "Flourish Users")
+
+con <- flourish.connection()
+
+deleted <- data.frame()
+
+for (table_name in tables) {
+  stmt <- paste("SELECT COUNT(*) AS count, MAX(date_entered) AS last_entered,
+                MAX(date_modified) AS last_modified FROM", table_name, "WHERE deleted = 1")
+  result <- dbGetQuery(con, stmt)
+  deleted <- deleted %>% bind_rows(data.frame(result))
+}
+
+deleted <- deleted %>%
+  rename(Deleted = count)
+
+record.tracking <- data.frame()
+
+for (table_name in tables) {
+  stmt <- paste("SELECT COUNT(*) AS count, MAX(date_entered) AS last_entered,
+                MAX(date_modified) AS last_modified FROM", table_name)
+  result <- dbGetQuery(con, stmt)
+  record.tracking <- record.tracking %>% bind_rows(data.frame(result))
+}
+
+x <- dbDisconnect(con)
+```
+```{r present}
+
+record.tracking <- record.tracking %>%
+  rename(`Total Records` = count, `Last Entered` = last_entered, `Last Modified` = last_modified) %>%
+  bind_cols(data.frame(Table = table.names)) %>%
+  bind_cols(data.frame(Deleted = deleted$Deleted)) %>%
+  mutate(`Non-Deleted Records` = `Total Records` - Deleted) %>%
+  select(Table, `Non-Deleted Records`, `Deleted Records` = Deleted,  `Total Records`, `Last Entered`, `Last Modified`)
+
+ft <- goc.table(record.tracking, paste0("Flourish Record Counts for ", params$date))
+ft
+```

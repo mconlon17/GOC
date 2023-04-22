@@ -1,0 +1,42 @@
+---
+title: Check All Members
+output:
+    html_document:
+        css: "../styles/styles.css"
+params:
+  date: !r Sys.Date()
+---
+```{r setup,echo=FALSE,message=FALSE,warning=FALSE}
+source("setup.R")
+```
+This report is not complete.  The Members table has over 80 pieces of information for each member.  Only several are tabulated below.  Much will be dded to Check Members as we go forward.
+```{r check-members}
+members <- get.members() %>%
+  mutate(Name = paste0(last_name, ", ", first_name)) %>%
+  arrange(Name)
+
+tab <- members %>%
+  select(Name, flo_primary_phone, primary_address_street, primary_address_city, primary_address_state, primary_address_postalcode)
+
+ft <- goc.table(tab, " Member Contact List")
+ft
+
+tab <- members %>%
+  select(Name, flo_emergency_con_phone_c, emergency_address_street, emergency_address_city, emergency_address_state, emergency_address_postalcode)
+
+ft <- goc.table(tab, " Member Emergency Contacts")
+ft
+
+tab <- members %>%
+  select(Name, flo_ssi, flo_ssdi, flo_food_stamps, flo_housing_voucher)
+
+ft <- goc.table(tab, " Member Benefit Information")
+ft
+
+tab <- members %>%
+  filter(is.na(birthdate)) %>%
+  select(Name, birthdate)
+
+ft <- goc.table(tab, paste0(nrow(tab), " Members without birthdates"))
+ft
+```

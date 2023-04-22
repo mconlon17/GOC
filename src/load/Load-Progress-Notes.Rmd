@@ -1,0 +1,164 @@
+---
+title: "Load Progress Notes from Applistic"
+header-includes:
+- \usepackage{pdflscape}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
+output:
+  html_document: default
+  word_document: 
+    reference_docx: word-styles.docx
+    keep_md: yes
+  pdf_document: default
+---
+
+```{r setup,echo=F,message=F,warning=F}
+knitr::opts_chunk$set(echo=FALSE, message=FALSE,warning=FALSE,fig.width=14)
+load("~/Documents/GOC/.RData")
+library(knitr)
+library(rmarkdown)
+library(tidyverse)
+library(kableExtra)
+library(lubridate)
+library(stringr)
+library(RMySQL)
+library(flextable)
+library(uuid)
+set_flextable_defaults(font.size = 10, theme_fun = theme_zebra, padding = 6, background.color = "#EFEFEF")
+```
+# Extract, Transform and Load.  From Applistic to Flourish.  Intended for one-time use.
+
+```{r extract_applistic_progress_notes}
+applistic.progress.notes <- read_csv("../data/applistic-final/progress_notes.csv") %>%
+    rename(ProgressNoteID=ProgressID,StaffID=AdvisorID,DateModified=LastUpdate,StartDate=ReviewStartDate,
+           EndDate=ReviewEndDate,ProgressNote=ProgressRpt) %>%
+    mutate(DateRecCreated=mdy(DateRecCreated), DateModified=mdy(DateModified), StartDate=mdy(StartDate),
+           MemberID=as.character(MemberID), StaffID=as.character(StaffID), EndDate=mdy(EndDate)) %>%
+    select(ProgressNoteID,MemberID,StaffID,ProgressNote,DateRecCreated,DateModified,StartDate,EndDate)
+
+# applistic.progress.notes
+# ft<-goc.table(applistic.progress.notes,"Applistic Progress Notes")
+# ft
+```
+### Join Member IDs
+```{r join-member-ids}
+# Get the members from Flourish
+con <- dbConnect(RMySQL::MySQL(),
+                       dbname = "gainesvillecrm",
+                       host = "3.136.184.221",
+                       port = 3306,
+                       user = "mikeconlon",
+                       password = "c8g8*uKkm4s4NM")
+
+members <- dbGetQuery(con, "SELECT * FROM contacts") %>%
+    rename(contact_id=id) %>%
+    select(contact_id,flo_external_id1_c)
+
+dbDisconnect(con)
+
+
+progress.notes <- applistic.progress.notes %>%
+    left_join(members,by=c("MemberID"="flo_external_id1_c"))
+
+progress.notes
+ft <-goc.table(progress.notes)
+ft
+
+```
+### Join Staff IDs
+```{r join-staff-ids}
+# Get the contacts from Flourish
+con <- dbConnect(RMySQL::MySQL(),
+                       dbname = "gainesvillecrm",
+                       host = "3.136.184.221",
+                       port = 3306,
+                       user = "mikeconlon",
+                       password = "c8g8*uKkm4s4NM")
+
+contacts <- dbGetQuery(con, "SELECT * FROM sa_contacts_2") %>%
+    rename(contact_2_id=id) %>%
+    select(first_name,last_name,contact_2_id,contact2_applistic_number)
+
+dbDisconnect(con)
+
+# Renumber goes here
+
+staff <-data.frame(StaffName=c("Brett","Maggie","Kyanna","Nakeshia","Cristina","Sandy","Brett","Maggie","Rose Ann","Robert",
+                               "Kaitlyn","Mia","Kaitlyn","Paul","Deidra","Cristina","Kalya","Ouida","Roscoe","Jeff",
+                               "Debbie","Brian","Jill","Fey","Chris","Luis","Kerry","Joseph","Robert","Barry"),
+                  OldID=c("1469","1540","1633","1715","1729","1733","1822","1874","1964","1968",
+                          "2026","2072","2074","2100","2076","1655","1997","1698","1425","664",
+                          "1269","674","1326","1126","1154","1329","1408","312","625","649"),
+                  NewID=c("3835","4038","1633","1715","3796","1733","3835","4038","1964","4039",
+                          "4651","4553","4651","2100","4641","3796","3212","3907","3410","4336",
+                          "4200","4025","3185","3998","4206","3603","3508","3837","3958","4130"))
+
+contacts <- contacts %>%
+    left_join(staff,by=c("contact2_applistic_number"="NewID")) %>%
+    mutate(contact2_applistic_number = ifelse(!is.na(contact2_applistic_number),
+                                              OldID,contact2_applistic_number)) %>%
+    filter(!is.na(contact2_applistic_number))
+    
+contacts[,c("first_name","last_name","contact2_applistic_number")]
+
+progress.notes <- progress.notes %>%
+    left_join(contacts,by=c("StaffID"="contact2_applistic_number"))
+
+ft <- goc.table(progress.notes)
+ft
+
+tab <- progress.notes %>%
+    group_by(contact_2_id) %>%
+    tally()
+ft <- goc.table(tab)
+ft
+
+```
+### Transform to Flourish column names
+```{r transform_progress_notes}
+
+transformed.progress.notes <- progress.notes %>%
+
+    mutate(id = UUIDgenerate(n=n())) %>%
+    mutate(name = paste0("PN-",seq(1,n()))) %>%
+    mutate(date_entered = Sys.time()) %>%
+    mutate(date_modified = Sys.time()) %>%
+    mutate(modified_user_id = "4cde6014-5735-b6a8-2975-63e1844134be") %>% # UUID for Mike Conlon
+    mutate(created_by = "4cde6014-5735-b6a8-2975-63e1844134be") %>%
+    mutate(description = "") %>%
+    mutate(deleted = 0) %>%
+    mutate(assigned_user_id = "") %>%
+
+    rename(progress_note=ProgressNote) %>%
+    rename(flo_date_of_note=DateRecCreated) %>%
+    rename(flo_note_start_date = StartDate) %>%
+    rename(flo_note_end_date = EndDate) %>%
+    mutate(pn_autoincrement=seq(1,n())) %>%
+    select("id","name","date_entered","flo_date_of_note","date_modified","modified_user_id","created_by","description","deleted","assigned_user_id",
+           "progress_note","flo_note_start_date","flo_note_end_date","pn_autoincrement","contact_id","contact_2_id")
+ft <- goc.table(transformed.progress.notes)
+ft
+write_csv(transformed.progress.notes,file="../output/transformed-progress-notes.csv")
+```
+### Load to Flourish
+```{r load_progress_notes}
+
+# Make a database connection to Flourish
+con <- dbConnect(RMySQL::MySQL(),
+                       dbname = "gainesvillecrm",
+                       host = "3.136.184.221",
+                       port = 3306,
+                       user = "mikeconlon",
+                       password = "c8g8*uKkm4s4NM")
+
+# Allow Tables to be loaded from R
+dbSendQuery(con, "SET GLOBAL local_infile = true;")
+
+# Load progress_notes to Flourish replacing whatever is there. value is R, name is remote table
+
+dbGetQuery(con,"DELETE FROM flo_progress_notes;")
+dbWriteTable(con, value = transformed.progress.notes, name = 'flo_progress_notes', append = T, row.names = F)
+
+
+dbDisconnect(con)
+```

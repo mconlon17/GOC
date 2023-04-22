@@ -1,0 +1,52 @@
+---
+title: Check Progress Notes
+output:
+    html_document:
+        css: "../styles/styles.css"
+params:
+  date: !r Sys.Date()
+---
+```{r setup,echo=FALSE,message=FALSE,warning=FALSE}
+source("setup.R")
+```
+
+```{r check-progress-notes}
+pn <- get.progress.notes() %>%
+  left_join(get.members(active.only = T)[, c("id", "first_name", "last_name")], by = c("contact_id" = "id")) %>%
+  mutate(Member = paste0(first_name, " ", last_name)) %>%
+  select(-first_name, -last_name) %>%
+  left_join(get.contacts()[, c("id", "first_name", "last_name")], by = c("contact_2_id" = "id")) %>%
+  mutate(Staff = paste0(first_name, " ", last_name)) %>%
+  left_join(get.goals()[, c("id", "flo_goal_description", "flo_goal_type")], by = c("goal_id" = "id")) %>%
+  select(name, Staff, Member, flo_goal_description, progress_note, flo_date_of_note)
+
+
+tab <- pn %>%
+  filter(Staff == "NA NA") %>%
+  arrange(desc(flo_date_of_note))
+
+ft <- goc.table(tab, paste0(nrow(tab), " Progress Notes with no Staff Member Assigned"))
+ft
+
+tab <- pn %>%
+  filter(Member == "NA NA") %>%
+  arrange(desc(flo_date_of_note))
+
+ft <- goc.table(tab, paste0(nrow(tab), " Progress Notes with no Member Assigned"))
+ft
+
+tab <- pn %>%
+  filter(is.na(flo_goal_description)) %>%
+  arrange(desc(flo_date_of_note))
+
+ft <- goc.table(tab, paste0(nrow(tab), " Progress Notes not linked to Goal"))
+ft
+
+tab <- pn %>%
+  filter(is.na(progress_note) | progress_note == "") %>%
+  arrange(desc(flo_date_of_note))
+
+ft <- goc.table(tab, paste0(nrow(tab), " Empty Progress Notes"))
+ft
+
+```

@@ -1,0 +1,63 @@
+---
+title: Check Employment
+output:
+    html_document:
+        css: "../styles/styles.css"
+params:
+  date: !r Sys.Date()
+---
+```{r setup,echo=FALSE,message=FALSE,warning=FALSE}
+source("setup.R")
+```
+
+```{r check-employment}
+emp <- get.employment()
+```
+```{r Employment-with-no-member}
+tab <- emp %>%
+  filter(contact_id == "") %>%
+  select(name)
+
+ft <- goc.table(tab, paste0(nrow(tab), " Employment with no member"))
+ft
+```
+```{r no-employer}
+tab <- emp %>%
+  filter(employer_id == "") %>%
+  select(name)
+
+ft <- goc.table(tab, paste0(nrow(tab), " Employment with no Employer"))
+ft
+```
+```{r no-start-date}
+tab <- emp %>%
+  filter(flo_emp_date_start == "" | is.na(flo_emp_date_start)) %>%
+  select(name)
+
+ft <- goc.table(tab, paste0(nrow(tab), " Employment with no Start Date"))
+ft
+```
+```{r tables}
+
+tab <- emp %>%
+  group_by(flo_emp_job_type) %>%
+  tally()
+
+ft <- goc.table(tab, paste0("Employment support"))
+ft
+
+tab <- emp %>%
+  group_by(flo_emp_approximate_hourly_pay) %>%
+  tally()
+
+ft <- goc.table(tab, paste0("Hourly Pay"))
+ft
+
+tab <- emp %>%
+  group_by(flo_emp_approximate_hours_wk) %>%
+  tally()
+
+ft <- goc.table(tab, paste0("Hours Per Week"))
+ft
+
+```

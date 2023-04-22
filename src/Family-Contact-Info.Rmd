@@ -1,0 +1,27 @@
+---
+title: Organization Contact Info
+
+output:
+  html_document:
+      css: "../styles/styles.css"
+---
+```{r setup,echo=FALSE,message=F,warning=F}
+source("setup.R")
+```
+
+```{r organizations}
+tab <- get.contacts() %>%
+  filter(c2_contact_record_type_c == "Family") %>%
+  select(
+    contact2_full_name, c2_primary_phone, email_address, primary_address_street, primary_address_city,
+    primary_address_state, primary_address_postalcode
+  ) %>%
+  rename(
+    `Name` = contact2_full_name, `Phone` = c2_primary_phone,
+    `Street Address` = primary_address_street, `City` = primary_address_city, `State` = primary_address_state,
+    `Zip` = primary_address_postalcode, `Email` = email_address
+  )
+
+ft <- goc.table(tab, "Family Contact Info")
+ft
+```

@@ -1,0 +1,95 @@
+---
+title: "Load Member Support Links"
+output:
+  html_document:
+      css: "../../styles/styles.css"
+---
+```{r setup,echo=F,message=F,warning=F}
+source("../setup.R")
+```
+```{r spplistic}
+# Get birthdates from Applistic data
+
+support.member.rel <- read_csv("../../data/applistic-final/supported_individuals.csv") %>%
+  mutate(RecipientID = as.character(RecipientID)) %>%
+  filter(RecipientID != "") %>%
+  select(RecipientID, SupportID)
+
+# nrow(support.member.rel)
+#
+# ft <- goc.table(tail(support.member.rel),"Applistic Support Member Rleationship")
+# ft
+
+members <- get.members() %>%
+  select(id, flo_external_id1_c)
+
+support.member.rel <- support.member.rel %>%
+  inner_join(members, by = c("RecipientID" = "flo_external_id1_c")) %>%
+  rename(flo_supports_contactscontacts_idb = id)
+
+# nrow(support.member.rel)
+#
+# ft <- goc.table(tail(support.member.rel),"Applistic Support Member Relationship")
+# ft
+
+# support id is flo_supports_contactsflo_supports_ida
+# member id is flo_supports_contactscontacts_idb
+
+applistic.supports <- read_csv("../../data/applistic-final/support_events.csv") %>%
+  mutate(Date = dmy(Date)) %>%
+  arrange(Date) %>%
+  select(SupportID, Date, Notes)
+
+# nrow(applistic.supports)
+#
+# ft <- goc.table(tail(applistic.supports,n=50),"Applistic Supports")
+# ft
+
+support.member.rel <- support.member.rel %>%
+  inner_join(applistic.supports, by = c("SupportID" = "SupportID"))
+
+# nrow(support.member.rel)
+#
+# ft <- goc.table(tail(support.member.rel),"Applistic Support Member Relationship")
+# ft
+
+supports <- get.supports() %>%
+  select(id, flo_support_date, flo_support_note) %>%
+  mutate(flo_support_date = as_date(flo_support_date)) %>%
+  arrange(flo_support_date)
+
+# nrow(supports)
+#
+# ft <- goc.table(tail(supports,n=300),"Flourish Supports")
+# ft
+
+support.member.rel <- support.member.rel %>%
+  inner_join(supports, by = c("Date" = "flo_support_date", "Notes" = "flo_support_note")) %>%
+  rename(flo_supports_contactsflo_supports_ida = id) %>%
+  select(flo_supports_contactsflo_supports_ida, flo_supports_contactscontacts_idb) %>%
+  mutate(id = UUIDgenerate(n = n()), date_modified = now(), deleted = 0)
+
+nrow(support.member.rel)
+
+ft <- goc.table(tail(support.member.rel, n = 100), "Applistic Support Member Relationship")
+ft
+```
+``` {r do-update}
+# Make a database connection to Flourish
+
+con <- dbConnect(RMySQL::MySQL(),
+  dbname = "gainesvillecrm",
+  host = "3.136.184.221",
+  port = 3306,
+  user = "mikeconlon",
+  password = "c8g8*uKkm4s4NM"
+)
+
+# Allow Tables to be loaded from R
+
+dbSendQuery(con, "SET GLOBAL local_infile = true;")
+
+dbWriteTable(con, value = support.member.rel, name = "flo_supports_contacts_c", append = T, row.names = F)
+
+dbDisconnect(con)
+```

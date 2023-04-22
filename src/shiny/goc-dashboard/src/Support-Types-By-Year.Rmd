@@ -1,0 +1,32 @@
+---
+title: "Support Types By Year"
+output:
+  html_document:
+        css: "../styles/styles.css"
+---
+
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+```{r supports}
+
+supports <- get.supports() %>%
+    mutate(Year=year(flo_support_date))
+
+# ft <- goc.table(tail(supports),"Supports")
+# ft
+
+tab <- supports %>%
+    select(flo_support_type, Year) %>%
+    group_by(flo_support_type,Year) %>%
+    tally() %>%
+    group_by(flo_support_type) %>%
+    spread(Year,n) %>%
+    mutate(across(where(is.numeric), ~ ifelse(is.na(.),0,.) )) %>%
+    rename(`Support Type`=flo_support_type) %>%
+    select(`Support Type`,`2020`,`2021`,`2022`,`2023`)
+
+ft <- goc.table(tab,"Supports Types By Year")
+ft
+
+```

@@ -1,0 +1,112 @@
+---
+title: "Load Member Emergency Contact Info"
+output:
+  html_document:
+    css: "../../styles/styles.css"
+---
+
+```{r setup,echo=F,message=F,warning=F}
+source("../setup.R")
+```
+
+```{r flourish}
+# Get Emergency Contact Info from Applistic data
+
+members <- get.members(include.deleted = T)
+
+emergency.contact.info <- read_csv("../../data/applistic-final/people.csv", col_types = list(
+  Race3 = "c", ProviderTitle = "c", ProviderSuffix = "c",
+  Referral = "c", Race8 = "c", Race9 = "c", Race12 = "c", Race13 = "c",
+  Race14 = "c", StaffIDNumber = "c"
+)) %>%
+  mutate(PersonID = as.character(PersonID)) %>%
+  mutate(Member = Member == "Member") %>%
+  mutate(Member = Member & !is.na(Member)) %>%
+  mutate(EmergencyContact1DayPhone = ifelse(EmergencyContact1DayPhone == "352-376-2285 ext 705", "352.376.2285",EmergencyContact1DayPhone)) %>%
+  filter(Member) %>%
+  select(PersonID, EmergencyContact1Name, EmergencyContact1DayPhone, EmergencyContact1EveningPhone, EmergencyContact1Email, EmergencyContact1StreetAddress, EmergencyContact1City, EmergencyContact1State, EmergencyContact1ZipCode, EmergencyContact1Notes)
+
+nrow(emergency.contact.info)
+
+ft <- goc.table(emergency.contact.info, paste("Emergency Contact Info", today()))
+ft
+
+emergency.contact.info <- members %>%
+  left_join(emergency.contact.info, by = c("flo_external_id1_c" = "PersonID")) %>%
+  filter(EmergencyContact1Name != "" & !is.na(EmergencyContact1Name)) %>%
+  
+  # Clean Emergency Contact Phone Number
+  
+    mutate(PhoneDigits = nchar(gsub("[^0-9]+", "", EmergencyContact1DayPhone))) %>%
+    mutate(NewPhone = gsub("[^0-9]+", "", EmergencyContact1DayPhone)) %>%
+    mutate(NewPhone = paste0(substring(NewPhone,1,3),"-",
+                             substring(NewPhone,4,6),"-",substring(NewPhone,7,10))) %>%
+    mutate(EmergencyContact1DayPhone = ifelse(PhoneDigits == 10, NewPhone, "")) %>%
+  
+  # Map and Update Fields
+
+  mutate(flo_emergency_contact_c = ifelse(flo_emergency_contact_c == "" | flo_emergency_contact_c == "Unknown" | is.na(flo_emergency_contact_c), EmergencyContact1Name, flo_emergency_contact_c)) %>%
+  mutate(flo_emergency_con_phone_c = ifelse(flo_emergency_con_phone_c == "" | flo_emergency_con_phone_c == "Unknown" | is.na(flo_emergency_con_phone_c), EmergencyContact1DayPhone, flo_emergency_con_phone_c)) %>%
+  mutate(emergency_address_street = ifelse(emergency_address_street == "" | emergency_address_street == "Unknown" | is.na(emergency_address_street), EmergencyContact1StreetAddress, emergency_address_street)) %>%
+  mutate(emergency_address_city = ifelse(emergency_address_city == "" | emergency_address_city == "Unknown" | is.na(emergency_address_city), EmergencyContact1City, emergency_address_city)) %>%
+  mutate(emergency_address_country = ifelse(emergency_address_country == "" | emergency_address_country == "Unknown" | is.na(emergency_address_country), "US", "US")) %>%
+  mutate(emergency_address_state = ifelse(emergency_address_state == "" | emergency_address_state == "Unknown" | is.na(emergency_address_state), EmergencyContact1State, emergency_address_state)) %>%
+  mutate(emergency_address_postalcode = ifelse(emergency_address_postalcode == "" | emergency_address_postalcode == "Unknown" | is.na(emergency_address_postalcode), EmergencyContact1ZipCode, emergency_address_postalcode)) %>%
+  # Add required fields
+
+  mutate(date_modified = now()) %>%
+  mutate(modified_user_id = "4cde6014-5735-b6a8-2975-63e1844134be") %>%
+  select(
+    id, first_name, last_name,
+    flo_emergency_contact_c,
+    flo_emergency_con_phone_c,
+    emergency_address_street,
+    emergency_address_city,
+    emergency_address_country,
+    emergency_address_state,
+    emergency_address_postalcode,
+    modified_user_id, date_modified
+  )
+
+nrow(emergency.contact.info)
+
+ft <- goc.table(emergency.contact.info, paste("Updating emergency contact information", today()))
+ft
+```
+
+```{r do-update}
+# Make a database connection to Flourish
+
+con <- dbConnect(RMySQL::MySQL(),
+                       dbname = "gainesvillecrm",
+                       host = "3.136.184.221",
+                       port = 3306,
+                       user = "mikeconlon",
+                       password = "c8g8*uKkm4s4NM")
+
+# Allow Tables to be loaded from R
+
+dbSendQuery(con, "SET GLOBAL local_infile = true;")
+
+# Create temporary table
+
+dbSendQuery(con, 'DROP TABLE temp_members_update;')
+dbWriteTable(con, value = emergency.contact.info, name = 'temp_members_update', append = F, row.names = F)
+
+dbSendQuery(con, 'UPDATE contacts
+                     INNER JOIN temp_members_update ON
+                         contacts.id = temp_members_update.id
+                     SET contacts.date_modified = temp_members_update.date_modified,
+                         contacts.modified_user_id = temp_members_update.modified_user_id,
+
+                         contacts.flo_emergency_contact_c = temp_members_update.flo_emergency_contact_c,
+                         contacts.flo_emergency_con_phone_c = temp_members_update.flo_emergency_con_phone_c,
+                         contacts.emergency_address_street = temp_members_update.emergency_address_street,
+                         contacts.emergency_address_city = temp_members_update.emergency_address_city,
+                         contacts.emergency_address_country = temp_members_update.emergency_address_country,
+                         contacts.emergency_address_state = temp_members_update.emergency_address_state,
+                         contacts.emergency_address_postalcode = temp_members_update.emergency_address_postalcode;')
+
+
+dbDisconnect(con)
+```

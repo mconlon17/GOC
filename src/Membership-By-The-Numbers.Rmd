@@ -1,0 +1,112 @@
+---
+title: "Membership By The Numbers"
+output:
+  html_document: 
+    css: "../styles/styles.css"
+params:
+  date: !r Sys.Date()
+---
+
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+
+```{r board}
+
+start_date <- floor_date(params$date, 'month') - months(2)
+end_date <- ceiling_date(params$date, 'month') - days(1)
+
+ndays <- as.integer(as_date(Sys.Date())-as_date(start_date)) +1
+
+attendance <- get.attendance(days=ndays) %>%
+  mutate(da_date_of_attendance = as_date(da_date_of_attendance)) %>%
+  filter(da_date_of_attendance %within% (start_date %--% end_date)) %>%
+  select(contact_2_id, da_date_of_attendance, da_total_hours)
+
+contacts <- get.contacts() %>%
+  filter(grepl("Member", c2_groups)) %>%
+  mutate(ContactID = id) %>%
+  select(id, ContactID)
+
+members <- get.members() %>%
+  select(id, date_entered)
+
+attendance <- attendance %>%
+  inner_join(contacts, by = c("contact_2_id" = "id")) %>%
+  ungroup()
+
+tab1 <- attendance %>%
+  mutate(month_start = floor_date(da_date_of_attendance, 'month')) %>%
+  group_by(month_start) %>%
+  summarise(UniqueMembers = n_distinct(ContactID))
+
+tab2 <- attendance %>%
+  mutate(month_start = floor_date(da_date_of_attendance, 'month')) %>%
+  group_by(month_start) %>%
+  summarise(AvgHrs = mean(da_total_hours, na.rm=T))
+
+tab3 <- attendance %>%
+  filter(wday(da_date_of_attendance) > 1 & wday(da_date_of_attendance) < 7) %>%
+  mutate(month_start = floor_date(da_date_of_attendance, 'month')) %>%
+  group_by(month_start, da_date_of_attendance) %>%
+  tally() %>%
+  group_by(month_start) %>%
+  summarize(ADA = mean(n))
+
+tab4 <- members %>%
+  filter(as_date(date_entered) %within% (start_date %--% end_date)) %>%
+  filter(as_date(date_entered) != ymd("2023-02-11")) %>%
+  mutate(month_start = floor_date(as_date(date_entered), 'month')) %>%
+  group_by(month_start) %>%
+  tally()
+
+tab4 <- tab4 %>%
+  add_row(month_start = ymd("2023-04-01"), n = 0, .after = 2)
+
+tab4$n <- as.integer(tab4$n)
+
+
+# Members receiving supports each month
+
+supports <- get.supports() %>%
+  filter(as_date(flo_support_date) %within% (start_date %--% end_date)) %>%
+  select(id, flo_support_type, flo_support_date)
+
+support.rel <- get.table("flo_supports_contacts_c") %>%
+  select("flo_supports_contactsflo_supports_ida", "flo_supports_contactscontacts_idb")
+
+tab5 <- supports %>%
+  left_join(support.rel, by=c("id"="flo_supports_contactsflo_supports_ida")) %>%
+  mutate(month_start = floor_date(as_date(flo_support_date), 'month')) %>%
+  group_by(month_start, flo_support_type) %>%
+  summarise(MemberCount = n_distinct(flo_supports_contactscontacts_idb, na.rm=T)) %>%
+  spread(flo_support_type, MemberCount) %>%
+  ungroup()
+
+tab5[is.na(tab5)] <- 0                                               # Replace all NA with 0
+
+tab5 <- as.data.frame(t(tab5))                                       # Transpose and recast as data.frame
+month_start <- format(ymd(tab5["month_start",]), "%B %Y")            # extract the month_start values and format them
+tab5 <- tab5[row.names(tab5) != "month_start", , drop = FALSE]       # remove month_start from the transponsed data
+tab5 <- tab5 %>%
+  rownames_to_column("Support Types")                                # Convert the row names to a data column for flextable
+colnames(tab5) <- c("Support Types", month_start)                    # Use the month_start formatted values as column names
+
+ft <-goc.table(tab5, paste0("Members receiving supports for the period ", start_date, " to ", end_date))
+ft
+
+
+board.report <- tab1 %>%
+  inner_join(tab2) %>%
+  inner_join(tab3) %>%
+  inner_join(tab4) %>%
+  select(
+    Month = month_start, `Unique Members` = UniqueMembers, `Average Workday Hours` = AvgHrs,
+    `Average Daily Attendance` = ADA, `New Members` = n,
+  )
+
+ft <- goc.table(board.report, paste0("Membership by the Numbers for the period ", start_date, " to ", end_date)) %>% 
+                  set_formatter_type(fmt_double="%.01f") %>% 
+                  set_formatter_type(fmt_date="%B, %Y")
+ft
+```

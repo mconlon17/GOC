@@ -1,0 +1,167 @@
+---
+title: "Load Gifts"
+header-includes:
+- \usepackage{pdflscape}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
+output:
+  html_document: default
+  word_document: 
+    reference_docx: word-styles.docx
+    keep_md: yes
+  pdf_document: default
+---
+
+```{r setup,echo=F,message=F,warning=F}
+knitr::opts_chunk$set(echo=FALSE, message=FALSE,warning=FALSE,fig.width=14)
+load("~/Documents/GOC/.RData")
+library(knitr)
+library(rmarkdown)
+library(tidyverse)
+library(kableExtra)
+library(lubridate)
+library(stringr)
+library(RMySQL)
+library(flextable)
+library(uuid)
+set_flextable_defaults(font.size = 10, theme_fun = theme_zebra, padding = 6, background.color = "#EFEFEF")
+```
+## Extract, Transform and Load.  From Applistic to Flourish.  Intended for one-time use.
+
+## Gifts
+
+Gifts are loaded after contacts to be able to associate gifts with their contact.
+```{r extract_gifts}
+gifts <- read_csv("../data/airtable/Donations-All Donations.csv") %>%
+    filter(!is.na(Campaign)) %>%
+    mutate(Restricted=grepl("restricted",`Curator's Note`) | grepl("Restricted",`Curator's Note`)) %>%
+    mutate(Year=year(`Donation Date`),YearMonth=ymd(paste0(Year,"-",month(`Donation Date`),"-01")),Amount=as.numeric(gsub('[$,]','',Donation))) %>%
+    mutate(`Payment Method`=ifelse(`Payment Method` == "United Way","united_way",ifelse(`Payment Method`=="Amazon Smile","amazon_smile",ifelse(`Payment Method`=="Cash","cash",ifelse(`Payment Method`=="Check","check",ifelse(`Payment Method`=="EventBrite","event_brite",ifelse(`Payment Method`=="Facebook","facebook",ifelse(`Payment Method`=="GiveGab","givegab",ifelse(`Payment Method`=="In-Kind","in_kind",ifelse(`Payment Method`=="Paypal","paypal","unknown")))))))))) %>%
+    arrange(Contact,desc(`Donation Date`))
+
+campaign.translate <- read_csv("../src/campaign-translate.csv")
+campaign.translate
+gifts <- gifts %>%
+    left_join(campaign.translate)
+
+# ft <-goc.table(gifts,"All Gifts")
+# ft
+```
+
+## Load contacts from Flourish
+
+```{r contacts}
+# Get the contacts from Flourish
+con <- dbConnect(RMySQL::MySQL(),
+                       dbname = "gainesvillecrm",
+                       host = "3.136.184.221",
+                       port = 3306,
+                       user = "mikeconlon",
+                       password = "c8g8*uKkm4s4NM")
+
+contacts <- dbGetQuery(con, "SELECT * FROM sa_contacts_2") %>% # Contacts (including Members) are stored in sa_contacts_2.  It's a Flourish thing
+    select(id,contact2_full_name)
+dbDisconnect(con)
+```
+```{r contacts-reduce}
+# There multiple contact records with the same name due to adding Applistic contacts
+# reduce to one contact per full name
+tab <- contacts %>%
+    group_by(contact2_full_name) %>% 
+    tally() %>%
+    arrange(desc(n),contact2_full_name)
+tab <- tab %>%
+    filter(n>1)
+ft <- goc.table(tab,"Duplicate contacts by full name")
+ft
+contacts <- contacts %>% 
+    distinct(contact2_full_name, .keep_all = TRUE)
+```
+## Join Gifts to Contacts on Contact name
+```{r add_contact_ids}
+gifts <- gifts %>%
+    left_join(contacts,by=c("Contact"="contact2_full_name")) %>%
+    rename(contact_2_id = id)
+gifts
+# ft <-goc.table(gifts,"All Gifts from AirTable with corresponding Flourish Contact UID")
+# ft
+```
+
+```{r transform-gifts}
+
+transformed.gifts <- gifts %>%
+
+    mutate(id = UUIDgenerate(n=n())) %>%
+    mutate(name = paste0("Gift-",seq(1,n()))) %>%
+    mutate(date_entered = Sys.time()) %>%
+    mutate(date_modified = Sys.time()) %>%
+    mutate(modified_user_id = "4cde6014-5735-b6a8-2975-63e1844134be") %>% # UUID for Mike Conlon
+    mutate(created_by = "4cde6014-5735-b6a8-2975-63e1844134be") %>%
+    mutate(description = "") %>%
+    mutate(deleted = 0) %>%
+    mutate(assigned_user_id = "") %>%
+  
+    mutate(flo_gift_date = `Donation Date`) %>%          
+    mutate(gift_contact_id = "") %>%         
+    mutate(flo_gift_amount = Amount) %>%        
+    mutate(flo_gift_payment_method = `Payment Method`) %>% 
+    mutate(flo_anonymous_gift = ifelse(Contact=="Nancy E Ryan","yes",ifelse(Contact=="Tammi Gibson","yes",ifelse(grepl("nonymo",Contact),"yes","no")))) %>%
+    mutate(flo_anonymous_gift = ifelse(is.na(flo_anonymous_gift),"no",flo_anonymous_gift)) %>%
+    mutate(flo_restricted_gift = ifelse(Restricted,"yes","no")) %>%    
+    mutate(flo_thank_you_date = `TY Date`) %>%      
+    mutate(GOC_restriction_letter = "" ) %>% 
+    mutate(GOC_curator_comments = `Curator's Note`) %>%    
+    mutate(GOC_gift_comments = Comment) %>%      
+    mutate(gifts_autoincrement = seq(1,n())) %>%
+  
+    select("id","name","date_entered","date_modified","modified_user_id","created_by","description","deleted",
+           "assigned_user_id","flo_gift_date","gift_contact_id","flo_gift_amount","flo_gift_payment_method",
+           "flo_gift_campaign","flo_anonymous_gift","flo_restricted_gift","flo_thank_you_date","GOC_restriction_letter",
+           "GOC_curator_comments","GOC_gift_comments","contact_2_id","gifts_autoincrement")
+  
+ft <- goc.table(transformed.gifts,"Gifts ready for load")
+ft
+write_csv(transformed.gifts,file="../output/transformed-gifts.csv")
+
+tab <- transformed.gifts %>%
+    group_by(flo_anonymous_gift) %>%
+    tally()
+tab
+tab <- transformed.gifts %>%
+    group_by(flo_restricted_gift) %>%
+    tally()
+tab
+tab <- transformed.gifts %>%
+    group_by(flo_gift_campaign) %>%
+    tally() %>%
+    arrange(desc(flo_gift_campaign))
+tab
+tab <- transformed.gifts %>%
+    group_by(flo_gift_payment_method) %>%
+    tally()
+tab
+```
+# Connect to Flourish and write the gifts data to Flourish
+
+```{r load_gifts}
+
+# Make a database connection to Flourish
+
+con <- dbConnect(RMySQL::MySQL(),
+                       dbname = "gainesvillecrm",
+                       host = "3.136.184.221",
+                       port = 3306,
+                       user = "mikeconlon",
+                       password = "c8g8*uKkm4s4NM")
+
+# Allow Tables to be loaded from R
+
+dbSendQuery(con, "SET GLOBAL local_infile = true;")
+
+# Load gifts to Flourish replacing whatever is there. value is R, name is remote table
+
+dbGetQuery(con,"DELETE FROM flo_gifts;")
+dbWriteTable(con, value = transformed.gifts, name = 'flo_gifts', append = T, row.names = F)
+
+dbDisconnect(con)
+```

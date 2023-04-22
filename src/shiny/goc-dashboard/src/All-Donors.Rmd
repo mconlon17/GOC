@@ -1,0 +1,33 @@
+---
+title: All Donors
+output:
+    html_document:
+        css: "../styles/styles.css"
+---
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+```{r donors}
+gift.amounts <- get.gifts() %>%
+  filter(!deleted) %>%
+  group_by(contact_2_id) %>%
+  summarise(total_dollars = sum(flo_gift_amount)) %>%
+  select(contact_2_id, total_dollars)
+
+donors <- get.contacts() %>%
+  inner_join(gift.amounts, by = c("id" = "contact_2_id")) %>%
+  select(
+    contact2_full_name, total_dollars, c2_primary_phone, primary_address_street, primary_address_city,
+    primary_address_state, primary_address_postalcode, email_address
+  ) %>%
+  arrange(desc(total_dollars)) %>%
+  rename(
+    `Name` = contact2_full_name, `Total Dollars` = total_dollars, `Phone` = c2_primary_phone,
+    `Street Address` = primary_address_street, `City` = primary_address_city, `State` = primary_address_state, `Zip` = primary_address_postalcode, `Email` = email_address
+  )
+
+ft <- flextable(donors) %>%
+  autofit() %>%
+  colformat_num(big.mark = ",", prefix = "$")
+ft
+```

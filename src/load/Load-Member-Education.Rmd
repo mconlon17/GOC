@@ -1,0 +1,114 @@
+---
+title: "Load Member Education"
+output:
+  html_document:
+    css: "../../styles/styles.css"
+---
+
+```{r setup,echo=F,message=F,warning=F}
+source("../setup.R")
+```
+
+```{r flourish}
+# Get Members
+
+members <- get.members(include.deleted = T) %>%
+  select(id, flo_external_id1_c)
+
+
+# Highest grade completed
+# Degree(s)
+# Education comments
+
+# Get applistic info
+
+education <- read_csv("../../data/applistic-final/education.csv") %>%
+  mutate(PersonID = as.character(PersonID)) %>%
+  select(PersonID, EducationalAccomplishment, Objective)
+
+# nrow(education)
+# ft <- goc.table(education)
+# ft
+
+education.s <- education %>%
+  group_by(PersonID, EducationalAccomplishment) %>%
+  tally() %>%
+  spread(EducationalAccomplishment, n)
+
+education.s[is.na(education.s)] <- 0
+
+education.s <- education.s %>%
+    
+    # Degrees and Certificates
+    
+  mutate(degrees = "") %>%
+  mutate(degrees = ifelse(`Associate's Degree`, paste0("^aa^,", degrees), degrees)) %>%
+  mutate(degrees = ifelse(`Bachelor's Degree`, paste0("^bachelors^,", degrees), degrees)) %>%
+  mutate(degrees = ifelse(GED, paste0("^ged^,", degrees), degrees)) %>%
+  mutate(degrees = ifelse(`High School Diploma`, paste0("^high_school^,", degrees), degrees)) %>%
+  mutate(degrees = ifelse(`Junior High School`, paste0("^junior_high^,", degrees), degrees)) %>%
+  mutate(degrees = ifelse(`Master's Degree`, paste0("^masters^,", degrees), degrees)) %>%
+  mutate(degrees = ifelse(`Ph.D / Professional`, paste0("^doctoral^,", degrees), degrees)) %>%
+  mutate(degrees = ifelse(`Some college`, paste0("^some_college^,", degrees), degrees)) %>%
+  mutate(degrees = ifelse(`Some high school`, paste0("^some_high_school^,", degrees), degrees)) %>%
+  mutate(degrees = str_sub(degrees, end = -2)) %>%
+    
+  # Highest grade completed
+    
+  mutate(grade = NA) %>%
+  mutate(grade = ifelse(`Associate's Degree`, max(grade,14,na.rm=T), grade)) %>%
+  mutate(grade = ifelse(`Bachelor's Degree`, max(grade,16,na.rm=T), grade)) %>%
+  mutate(grade = ifelse(GED, max(grade,12,na.rm=T), grade)) %>%
+  mutate(grade = ifelse(`High School Diploma`, max(grade,12,na.rm=T), grade)) %>%
+  mutate(grade = ifelse(`Junior High School`, max(grade,8,na.rm=T), grade)) %>%
+  mutate(grade = ifelse(`Master's Degree`, max(grade,18,na.rm=T), grade)) %>%
+  mutate(grade = ifelse(`Ph.D / Professional`, max(grade,20,na.rm=20), grade)) %>%
+  mutate(grade = ifelse(`Some college`, max(grade,13,na.rm=T), grade)) %>%
+  mutate(grade = ifelse(`Some high school`, max(grade,9,na.rm=T), grade)) %>%
+    
+  select(PersonID, degrees, grade) %>%
+  inner_join(education, by="PersonID") %>%
+  inner_join(members, by=c("PersonID"="flo_external_id1_c")) %>%
+  rename(flo_highest_grade_completed = grade, flo_degrees_certificates = degrees, flo_education_comments = Objective) %>%
+  mutate(date_modified = now()) %>%
+  mutate(modified_user_id = "4cde6014-5735-b6a8-2975-63e1844134be") %>%
+  select(id, flo_highest_grade_completed, flo_degrees_certificates, flo_education_comments, date_modified, modified_user_id)
+
+nrow(education.s)
+ft <- goc.table(education.s)
+ft
+```
+
+```{r do-update}
+# Make a database connection to Flourish
+
+con <- dbConnect(RMySQL::MySQL(),
+                       dbname = "gainesvillecrm",
+                       host = "3.136.184.221",
+                       port = 3306,
+                       user = "mikeconlon",
+                       password = "c8g8*uKkm4s4NM")
+
+# Allow Tables to be loaded from R
+
+dbSendQuery(con, "SET GLOBAL local_infile = true;")
+
+# Create temporary table
+
+# dbSendQuery(con, 'DROP TABLE temp_members_update;')
+dbWriteTable(con, value = education.s, name = 'temp_members_update', append = F, row.names = F)
+
+dbSendQuery(con, 'UPDATE contacts
+                  INNER JOIN temp_members_update ON
+                         contacts.id = temp_members_update.id
+                     SET contacts.date_modified = temp_members_update.date_modified,
+                         contacts.modified_user_id = temp_members_update.modified_user_id,
+
+                         contacts.flo_highest_grade_completed  = temp_members_update.flo_highest_grade_completed,
+                         contacts.flo_degrees_certificates     = temp_members_update.flo_degrees_certificates,
+                         contacts.flo_education_comments       = temp_members_update.flo_education_comments 
+                 ;')
+
+dbSendQuery(con, 'DROP TABLE temp_members_update;')
+dbDisconnect(con)
+```

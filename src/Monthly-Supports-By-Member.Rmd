@@ -1,0 +1,92 @@
+---
+title: Monthly Supports by Member `r format(params$date,"%B, %Y")`
+output:
+  html_document:
+    css : "../styles/styles.css"
+params:
+  date: !r Sys.Date() - 30
+---
+
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+```{r supports}
+start_date <- floor_date(params$date, "month")
+end_date <- ceiling_date(params$date, "month") - days(1)
+
+supports <- get.supports(with.members = T) %>%
+  mutate(full_name = paste0(last_name, ", ", first_name)) %>%
+  mutate(flo_support_date = as_date(flo_support_date)) %>%
+  filter(flo_support_date %within% (start_date %--% end_date)) %>%
+  select(flo_support_type, flo_support_date, full_name) %>%
+  arrange(full_name)
+
+tab <- supports %>%
+  group_by(full_name, flo_support_type) %>%
+  tally() %>%
+  spread(flo_support_type, n)
+
+tab[is.na(tab)] <- 0
+
+total_supports <- sum(colSums(Filter(is.numeric, tab)))
+
+tab <- rbind(tab, data.frame(full_name="Total",t(colSums(tab[,-1])))) # Column totals
+
+tab <- cbind(tab, data.frame(total=rowSums(tab[,-1]))) # Row totals
+
+```
+```{r rename}
+
+vars <- list(
+
+  c("full_name", "Name"),
+  c("Benefits", "Bene fits"),
+  c("Culinary", "Culi nary"),
+  c("Education_in_house", "Edu GOC"),
+  c("Education_pre_enrollment", "Edu pre"),
+  c("Education_post_enrollment", "Edu post"),
+  c("Employment_readiness", "Emp pre"),
+  c("Employment_IE", "Emp IE"),
+  c("Employment_SE", "Emp SE"),
+  c("Employment_TE", "Emp TE"),
+  c("Development", "Dev"),
+  c("Garden", "Gar den"),
+  c("Housing", "Hou sing"),
+  c("Janitorial", "Jani torial"),
+  c("Media", "Me dia"),
+  c("Mediation", "Medi ation"),
+  c("Office", "Off ice"),
+  c("Referral", "Ref erral"),
+  c("Social", "Soc ial"),
+  c("Spiritual", "Spiri tual"),
+  c("Transportation_education", "Van Edu"),
+  c("Transportation_employment", "Van Emp"),
+  c("Transportation_goc", "Van GOC"),
+  c("Transportation_health", "Van Hlth"),
+  c("Transportation_wellness", "Van Well"),
+  c("Unknown", "Unk"),
+  c("Wellness", "Well ness"),
+  c("Work_ordered_day", "WOD"),
+  c("total", "Total")
+)
+
+v1 <- c()
+v2 <- c()
+
+for (v in vars) { v1 <- c(v1,v[1]); v2 <- c(v2,v[2])}
+
+for (v in vars) {
+  if (!(v[1] %in% names(tab))) { tab[, v[1]] <- 0 }
+}
+
+tab <- tab %>%
+  rename_with(~ v2, all_of(v1)) %>%
+  select(v2)
+
+tab[tab == 0] <- NA
+
+```
+```{r table}
+ft <- goc.table(tab, paste0(total_supports, " supports for ", nrow(tab), " members from ", start_date, " to ", end_date)) %>% width(1, width = 2)
+ft
+```

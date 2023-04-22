@@ -1,0 +1,46 @@
+---
+title: "Clean Member Nicknames"
+output:
+  html_document: default
+---
+```{r setup,echo=F,message=F,warning=F}
+source("../setup.R")
+```
+```{r flourish}
+
+nicknames <- get.members(include.deleted=T) %>%
+    mutate(OldNickname = flo_nickname_preferred_name_c) %>%
+    mutate(flo_nickname_preferred_name_c = ifelse(flo_nickname_preferred_name_c == "NA","",flo_nickname_preferred_name_c)) %>%
+    filter(OldNickname != flo_nickname_preferred_name_c) %>%
+    mutate(date_modified = now()) %>%
+    mutate(modified_user_id = "4cde6014-5735-b6a8-2975-63e1844134be") %>%
+    select(id,date_modified, modified_user_id, OldNickname, flo_nickname_preferred_name_c)
+
+ft <- goc.table(nicknames,paste("Nickname Cleaning",today()))
+ft
+```
+``` {r do-update}
+
+# Make a database connection to Flourish
+
+con <- flourish.connection()
+
+# Allow Tables to be loaded from R
+
+dbSendQuery(con, "SET GLOBAL local_infile = true;")
+
+# Create temporary table
+
+dbWriteTable(con, value = nicknames, name = 'temp_members_update', append = F, row.names = F)
+
+dbSendQuery(con, 'UPDATE contacts
+                     INNER JOIN temp_members_update ON
+                         contacts.id = temp_members_update.id
+                     SET contacts.date_modified = temp_members_update.date_modified,
+                         contacts.modified_user_id = temp_members_update.modified_user_id,
+                         contacts.flo_nickname_preferred_name_c = temp_members_update.flo_nickname_preferred_name_c;')
+
+dbSendQuery(con, 'DROP TABLE temp_members_update;')
+dbDisconnect(con)
+
+```

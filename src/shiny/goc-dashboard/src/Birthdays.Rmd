@@ -1,0 +1,36 @@
+---
+title: Birthdays in `r format(params$date,"%B")`
+
+output:
+  html_document:
+      css: "../styles/styles.css"
+params:
+  date: !r Sys.Date()
+---
+```{r setup,echo=FALSE,message=F,warning=F}
+source("setup.R")
+```
+
+```{r birthdays}
+
+start_date <- floor_date(params$date, 'month')
+end_date <- ceiling_date(params$date, 'month') - days(1)
+
+# This should be driven off contacts with a list that includes Members, Staff, and Volunteers
+
+members <- get.members(active.only=T)
+
+contacts <- get.contacts() %>%
+  select(id, c2_groups) %>%
+  filter(!grepl("Deceased", c2_groups))
+
+tab <- members %>%
+  inner_join(contacts, by = c("contact_id_c" = "id")) %>%
+  mutate(birthday = ymd(paste(year(Sys.Date()), month(birthdate), day(birthdate), sep = "-"))) %>%
+  select(first_name, last_name, birthday) %>%
+  filter(birthday %within% (start_date %--% end_date)) %>%
+  arrange(birthday)
+
+ft <- goc.table(tab, "Active Member Birthdays")
+ft
+```

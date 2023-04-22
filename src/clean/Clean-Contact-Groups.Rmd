@@ -1,0 +1,45 @@
+---
+title: "Clean Contact Groups"
+output:
+  html_document:
+    css: "../../styles/styles.css"
+---
+```{r setup,echo=F,message=F,warning=F}
+source("../setup.R")
+```
+Remove trailing comma from c2_groups if found.
+```{r flourish}
+
+groups <- get.contacts() %>%
+  mutate(OldGroups = c2_groups) %>%
+  filter(str_sub(OldGroups, -1) == ",") %>% # Trailing comma
+  mutate(c2_groups = str_sub(c2_groups, 1, end = -2)) %>%
+  mutate(date_modified = now(), modified_user_id = "4cde6014-5735-b6a8-2975-63e1844134be") %>%
+  select(id, OldGroups, c2_groups, date_modified, modified_user_id)
+
+ft <- goc.table(groups, paste(nrow(groups), "Contacts to improve"))
+ft
+```
+``` {r do-update}
+# Make a database connection to Flourish
+
+con <- flourish.connection()
+
+# Allow Tables to be loaded from R
+
+dbSendQuery(con, "SET GLOBAL local_infile = true;")
+
+# Create temporary table
+
+dbWriteTable(con, value = groups, name = 'temp_update', append = F, row.names = F)
+
+dbSendQuery(con, 'UPDATE sa_contacts_2
+                     INNER JOIN temp_update ON
+                         sa_contacts_2.id = temp_update.id
+                     SET sa_contacts_2.date_modified = temp_update.date_modified,
+                         sa_contacts_2.modified_user_id = temp_update.modified_user_id,
+                         sa_contacts_2.c2_groups = temp_update.c2_groups;')
+
+dbSendQuery(con, 'DROP TABLE temp_update;')
+dbDisconnect(con)
+```

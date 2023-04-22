@@ -1,0 +1,78 @@
+---
+title: "Load Member Accessibility"
+output:
+  html_document:
+    css: "../../styles/styles.css"
+---
+
+```{r setup,echo=F,message=F,warning=F}
+source("../setup.R")
+```
+# Accessibility
+
+Accessibility data was entered by hand.  No impairment data in Applistic beyond comments in ConditionsAllergies.  
+```{r flourish}
+# Get Members
+
+members <- get.members(include.deleted = T) %>%
+  select(id, flo_external_id1_c)
+
+
+# Referral Source
+# Referred By
+# Membership Date
+
+# Get applistic info
+
+accessibility <- read_csv("../../data/applistic-final/people.csv", col_types = list(
+  Race3 = "c", ProviderTitle = "c", ProviderSuffix = "c",
+  Referral = "c", Race8 = "c", Race9 = "c", Race12 = "c", Race13 = "c",
+  Race14 = "c", StaffIDNumber = "c"
+)) %>%
+  mutate(PersonID = as.character(PersonID)) %>%
+  mutate(Member = Member == "Member") %>%
+  mutate(Member = Member & !is.na(Member)) %>%
+  filter(Member) %>%
+  select(PersonID, FirstName, LastName, ConditionsAllergies)
+
+nrow(accessibility)
+ft <- goc.table(accessibility)
+ft
+```
+```{r do-update}
+# # Make a database connection to Flourish
+# #
+# con <- dbConnect(RMySQL::MySQL(),
+#   dbname = "gainesvillecrm",
+#   host = "3.136.184.221",
+#   port = 3306,
+#   user = "mikeconlon",
+#   password = "c8g8*uKkm4s4NM"
+# )
+# 
+# # Display a column length
+# 
+# # rs <- dbSendQuery(con,"SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = 'gainesvillecrm' AND TABLE_NAME = 'contacts' AND COLUMN_NAME = 'flo_housing_status_c';")
+# # dbFetch(rs)
+# 
+# # Allow Tables to be loaded from R
+# dbSendQuery(con, "SET GLOBAL local_infile = true;")
+# 
+# # Create temporary table
+# 
+# dbSendQuery(con, "DROP TABLE temp_members_update;")
+# dbWriteTable(con, value = housing, name = "temp_members_update", append = F, row.names = F)
+# 
+# dbSendQuery(con, "UPDATE contacts
+#                   INNER JOIN temp_members_update ON
+#                          contacts.id = temp_members_update.id
+#                      SET contacts.date_modified = temp_members_update.date_modified,
+#                          contacts.modified_user_id = temp_members_update.modified_user_id,
+# 
+#                          contacts.flo_housing_status_c   = temp_members_update.flo_housing_status_c,
+#                          contacts.flo_housing_comments = temp_members_update.flo_housing_comments
+#                  ;")
+# 
+# dbSendQuery(con, "DROP TABLE temp_members_update;")
+# dbDisconnect(con)
+```

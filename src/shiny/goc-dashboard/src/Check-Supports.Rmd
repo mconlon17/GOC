@@ -1,0 +1,77 @@
+---
+title: Check Supports
+output:
+    html_document:
+        css: "../styles/styles.css"
+params:
+  date: !r Sys.Date()
+---
+```{r setup,echo=FALSE,message=FALSE,warning=FALSE}
+source("setup.R")
+```
+
+```{r check-supports}
+
+rel <- get.table("flo_supports_contacts_c")
+    
+members <- get.members()[,c("id","first_name","last_name")] %>%
+  mutate(Member = paste0(last_name, ", ", first_name)) %>%
+  select(id,Member)
+
+supports <- get.supports() %>%
+  left_join(get.contacts()[, c("id", "first_name", "last_name")], by = c("sa_contacts_2_id" = "id")) %>%
+  mutate(Staff = paste0(first_name, " ", last_name)) %>%
+  left_join(rel, by = c("id"="flo_supports_contactsflo_supports_ida")) %>%
+  left_join(members, by=c("flo_supports_contactscontacts_idb"="id")) %>%
+  select(name, Staff, Member, flo_support_date, flo_support_type, flo_support_note, flo_support_duration)
+
+
+tab <- supports %>%
+  filter(Staff == "NA NA") %>%
+  arrange(desc(flo_support_date))
+
+ft <- goc.table(tab, paste0(nrow(tab), " Supports with no Staff Member Assigned"))
+ft
+
+tab <- supports %>%
+  filter(is.na(Member)) %>%
+  arrange(desc(flo_support_date))
+
+ft <- goc.table(tab, paste0(nrow(tab), " Supports with no Member Assigned"))
+ft
+
+tab <- supports %>%
+  filter(is.na(flo_support_date))
+
+ft <- goc.table(tab, paste0(nrow(tab), " Supports with no support date"))
+ft
+
+tab <- supports %>%
+  filter(is.na(flo_support_duration)) %>%
+  arrange(desc(flo_support_date))
+
+ft <- goc.table(tab, paste0(nrow(tab), " Supports with no duration"))
+ft
+
+tab <- supports %>%
+  filter(flo_support_duration == 0) %>%
+  arrange(desc(flo_support_date))
+
+ft <- goc.table(tab, paste0(nrow(tab), " Supports with zero duration"))
+ft
+
+tab <- supports %>%
+  group_by(flo_support_type) %>%
+  tally()
+
+ft <- goc.table(tab, "Support Type")
+ft
+
+tab <- supports %>%
+  group_by(flo_support_duration) %>%
+  tally()
+
+ft <- goc.table(tab, "Support Durations")
+ft
+
+```

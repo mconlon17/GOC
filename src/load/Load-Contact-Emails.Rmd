@@ -1,0 +1,122 @@
+---
+title: "Load Contact Emails"
+output:
+  html_document:
+      css: "../styles/styles.css"
+---
+```{r setup,echo=F,message=F,warning=F}
+source("../setup.r")
+```
+```{r flourish}
+# Get emails from AirTable Donor data
+
+## Get a look at existing records -- no data procesing, just need to see records for field names
+
+# email.addr.bean.rel <- get.table("email_addr_bean_rel") %>% filter(primary_address == 1)
+#
+# ft <- goc.table(email.addr.bean.rel, "Email Address Bean Rel")
+# ft
+
+## Get a look at existing records -- no data processing, just to see field names
+
+# email.addresses <- get.table("email_addresses") %>% filter(!deleted)
+#
+# ft <- goc.table(email.addresses, "Email addresses")
+# ft
+
+emails <- read_csv("../../data/airtable/Contacts-All Contacts.csv") %>%
+  rename(
+    first_name = `First Name`, last_name = `Last Name`, street_address = StreetAddress,
+    contact_type = `Contact Type`, email = Email
+  ) %>%
+  filter(email != "" & !is.na(email)) %>%
+  select(first_name, last_name, contact_type, email, street_address)
+
+# nrow(emails)
+#
+# ft <- goc.table(emails, paste("Adding Emails from Airtable", today()))
+# ft
+
+# Find matching contact UUIDs (get contatcs, join to emails)
+
+contacts <- get.contacts() %>%
+  filter(email_address == "" | is.na(email_address)) %>% # filter out contacts that already have email
+  select(id, first_name, last_name, c2_contact_record_type_c, primary_address_street)
+
+# nrow(contacts)
+#
+# ft <- goc.table(contacts, "Contacts without emails")
+# ft
+#
+
+emails <- emails %>%
+  inner_join(contacts, by = c(
+    "first_name" = "first_name",
+    "last_name" = "last_name",
+    "street_address" = "primary_address_street",
+    "contact_type" = "c2_contact_record_type_c"
+  )) %>% # all four must match
+  rename(bean_id = id)
+
+# nrow(emails)
+# 
+# ft <- goc.table(emails, paste("Emails matched to contacts", today()))
+# ft
+
+# Create the email address records to be appended to the existing records
+
+email.addresses <- emails %>%
+  mutate(
+    id = UUIDgenerate(n = n()),
+    email_address = email,
+    email_address_caps = str_to_upper(email),
+    invalid_email = 0,
+    opt_out = 0,
+    confirm_opt_in = "not-opt-in",
+    date_created = rep(now(), n()),
+    date_modified = rep(now(), n()),
+    deleted = 0
+  ) %>%
+  select(id, email_address, email_address_caps, invalid_email, opt_out, confirm_opt_in, date_created, date_modified, deleted)
+
+ft <- goc.table(email.addresses, "Email address records to be added")
+ft
+
+# Create the email address bean relationship records to be appended to the existing records
+
+email.addr.bean.rel <- data.frame(
+  id = UUIDgenerate(n = nrow(emails)), 
+  email_address_id = email.addresses$id,
+  bean_id = emails$bean_id, 
+  bean_module = "SA_Contacts_2", 
+  reply_to_address = 0, 
+  primary_address = 1,
+  date_created = now(), 
+  date_modified = now(), 
+  deleted = 0
+)
+
+ft <- goc.table(email.addr.bean.rel, "Email relation records to be added")
+ft
+```
+``` {r do-update}
+# Make a database connection to Flourish
+
+con <- dbConnect(RMySQL::MySQL(),
+                       dbname = "gainesvillecrm",
+                       host = "3.136.184.221",
+                       port = 3306,
+                       user = "mikeconlon",
+                       password = "c8g8*uKkm4s4NM")
+
+# Allow Tables to be loaded from R
+
+dbSendQuery(con, "SET GLOBAL local_infile = true;")
+
+# Append new email addresses and new email relationships to respective tables
+
+dbWriteTable(con, value = email.addresses, name = 'email_addresses', append = T, row.names = F)
+dbWriteTable(con, value = email.addr.bean.rel, name = 'email_addr_bean_rel', append = T, row.names = F)
+
+dbDisconnect(con)
+```

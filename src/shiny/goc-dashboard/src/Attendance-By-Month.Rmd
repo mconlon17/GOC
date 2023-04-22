@@ -1,0 +1,15 @@
+---
+title: GOC Recorded Member Attendance by Month
+output:
+    html_document:
+        css: "../styles.styles.doc"
+---
+
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+
+```{r attendance}
+
+plot.member.attendance.by.month()
+```

@@ -1,0 +1,170 @@
+---
+title: "Flourish Duplicates"
+output:
+  html_document:
+    css : "../../styles/styles.css"
+---
+
+```{r setup,echo=F,message=F,warning=F}
+source("../setup.r")
+```
+```{r contacts}
+contacts <- get.contacts(include.deleted=T)
+
+tab <- contacts %>%
+  filter(!deleted) %>%
+  group_by(first_name, last_name) %>%
+  tally() %>%
+  arrange(desc(n)) %>%
+  filter(n > 1) %>%
+  filter(!last_name == "Schreiber") %>%
+  filter(!last_name == "Lowry") %>%
+  filter(!last_name == "Smith")
+
+ft <- goc.table(tab, "Contacts")
+ft
+
+tab <- contacts %>%
+  filter(startsWith(last_name, "Weth")) %>%
+  select(first_name, last_name, deleted, id, c2_primary_phone)
+ft <- goc.table(tab)
+ft
+
+  old_uuid <- c(
+"53a00229-7d2c-4261-864e-7a1f636c0d49", "e16c1beb-6843-4080-9e53-b0ce68527739", "3b1f40ad-a30c-41e2-aca1-d77379cf3684", "4a436df2-df27-4917-9095-ad75dbb30bc8", "caf5973f-f7ab-4caf-8803-75213e090a98", "9893cd1d-6600-4f19-829b-f1284aa69bb1", "a900015e-8570-431c-ad4c-53017ec43b5a", "c0099606-2890-43be-a6ae-d249e8c6b45a", "e00588bb-d084-44f8-8837-063ea87546fd", "54aba7d3-ab8b-42b4-97a9-13b705270c26", "c64c4c07-41bf-4b7b-b726-b7548fac57a4", "85e3176f-767b-4a75-81d2-c631cf61bc57", "c66c008a-fe6c-427a-9462-6b51305b7878", "00f5fa7d-4d0a-4447-8e21-b751c1ed5698", "647a271f-6cc0-42eb-bbf7-82c75c18a8c9", "1a620d4c-c1f3-436f-8120-0ec6142395f3", "72091b43-232f-4af8-aa17-ddbbbe7afb95", "c3f757ff-c475-4b3a-9732-607b4af926e3", "a0485f27-9d39-42c8-a46c-c74a314158ae", "1a49f922-dbc9-42a0-8799-f0358f4701f3", "85e3176f-767b-4a75-81d2-c631cf61bc57", "93ed6b97-745e-4658-ae75-c4cdaa57df43", "3220022c-e7a4-43e4-a3fe-2840f83ff99e", "7fde4e68-6e84-4b8b-8863-c5c0a06e3300", "236f6a58-fe27-44a7-b948-294fac686cbe", "239990b3-f3cd-4400-8214-67a85a49f42c", "2e42ea5a-4799-41ba-abeb-17448b05eb61", "50854aac-fdd9-4a9e-80b5-3d2eaebb5403", "2c74ea36-174b-4ced-8e8b-92e3eae18b98", "0dfe8a23-0bde-48ac-94cb-57becad4225b", "a0aac4f9-9b67-4b5b-aeec-141cea72f22a", "a4a8afde-7b0c-4b37-bc19-63dc9d0caab1", "afcbdf64-1434-45df-afc3-d2a757df94fe", "18bd733a-9ad6-4b7e-b5c4-079f43f5142d", "2778d35f-9a79-439b-b932-9f5aad743d41", "3e5a7836-988a-4d04-ab99-ca261d8fc4e7", "30eccb43-b478-40cb-afe6-99d3b83e01fd", "2490ca61-1cc4-4942-9c7f-250352c247a5", "9c079eea-7046-414f-85b2-00a1ce550dd8", "5d22c3c6-8061-4c27-91f9-3ec5e3507b24")
+  old2_uuid <- c(
+"d5e099f3-1f6b-42c0-b649-6d42988bef1b", "21a6f74a-f570-45dd-a8f2-8a85cabbfc01", "1308f956-5266-43cb-ae3d-ecdbaf6a15fd", "a8a26046-e187-4a70-a1d0-5ecafb735f86", "f2618b1c-ac0c-47be-b37e-cda2098d906f", "8efa7fa3-383d-4953-a90f-7ab04ad8c92b", "2bad6a1f-255b-4821-9c4e-5ce2281c3a62", "d2d7624c-3c03-48d3-9c38-c5b87557d8fe", "e2079f17-1b06-4deb-a881-0b37e0f4e085", "9fa32b28-f658-468f-9843-26d093456a73", "3742c0fd-a1a9-459d-8378-f96b8553e35c", "d99ff124-5840-4b2a-869f-b0ca5cb3c25c", "202d46f5-e818-445a-b908-6c9ad6e0a978", "088d42ac-ca46-4061-9f43-e6e3960d4b93", "a14ac273-a7b8-414c-98db-b82dac1e45e2", "e97ff1f1-f38b-5422-7188-63eece8a9090", "046f721a-2390-4852-946c-776cd56e81d7", "54f46d61-6488-464d-9e84-d9c1c06e91e9", "60e250be-fc2c-4994-9f4f-f6367f6c27ef", "ef338078-0235-4f28-831c-d14163ee699f", "42f94011-6b1a-488d-9d23-bd84e75c6ffa", "57172e34-1eba-4932-a1ef-54c17faf9feb", "66ce53d2-eacc-423c-8d77-551e5991b000", "f9d4980a-f2ac-4490-90cb-0a76066584d3", "e816e367-218d-49ae-9d1c-c4ef41267ffc", "cd0a2f64-a1e3-4bf4-a4f9-ef95d111969e", "869c33a1-c062-496b-9082-8c083dd2e1e0", "9984aad8-95ec-47f3-9d1a-3066ee38ff27", "1d6dc52f-17ed-4360-9718-205cd5ce23b7", "3cb9a7f0-25a5-4e87-a629-85bbf9d21f06", "20294e14-5202-48e8-bdeb-a2cd03f2c65e", "e9da26f5-8f64-4dad-b684-26fcdc7a465f", "b7986ead-e3ee-46e6-8426-425e683e0057", "00140f27-a827-4950-943b-86060b971be0", "6868c603-731b-4338-b0fc-ff8f423f2be6", "15a4c15d-9f8a-4f5f-b193-9e0e04581b15", "2b7b63ed-b0f3-4868-a0fb-c961d1c724c8", "00b9d9e1-d0ad-44ef-af7a-14b2fafb96fe", "ff1ddaef-686b-44b1-b4d6-3c8ddaf09061", "7fb0b053-222c-48bf-9acf-78dcaf1e3e1d", "1cf27405-2255-419c-858a-800a2fabd396", "cedade72-4e80-4de9-952f-3af0fa5a4f7e", "5224cfff-38ff-4d67-96ee-182df0a7e1ce", "c625a1ed-9bd0-44c6-a756-5a66108dc29d", "8768dc43-d57f-407c-8fd6-3191d694a0a3", "7a074e53-857b-471e-940b-e1e5d9198565", "9b6217f3-b623-4bf8-9f2c-14b3b06565e3", "95f638c6-914d-4fd5-8995-6a496acfa202", "0862ecf5-f1fc-42ea-b548-29dea164e1b2", "7dc05231-3206-42d3-b376-2c8bf2f0c5d8", "bc07be80-9583-4a7f-be64-f5ddf20bb416", "a9c9e87b-0a82-4aa4-b11e-ef306e0af493", "2155c763-ba23-4a65-84cf-a5594c84c8ba", "b50240bf-c4b2-49c4-be37-61460dd6d04d", "bf1e6ef3-46e8-4998-8501-b84d85ad4e66", "e0e94e66-79e7-44b6-aa6f-edc4175b7154", "2280f831-4082-4897-ac55-f7e333c815dc", "b59bbca4-6fba-4a7c-a0e2-a473307a710d", "ce8a2819-9c58-4d98-8bb1-c0513fc344f7", "57a24afe-5d4b-4562-948c-d0a57b6e115d", "48ef8dde-fde8-4c3f-88db-bbc499fd3f12", "6c3a32fa-23f3-4eaa-94c6-76398c1903b2", "6b82f287-e097-4e91-99cb-574b1e592a16", "e427e143-0ed4-4757-a453-84910f6d36de", "ddc5e455-646b-4223-ab15-e21cbcfa3e75", "ddf63a88-eb20-4a76-b338-184b538b2303", "27a6ef41-6a09-9386-3859-64090557507e", "50472381-da3e-43fb-8d85-f37ebf3c4998", 
+"785398f6-0f72-4d3b-90ad-806a741e9232", "a95c4e4b-7efd-4ae1-8a88-af8205ac9720", "d0524f0c-b3bb-cb64-2f26-6421ad7f4cdb", "311eb293-600a-4e59-b29f-d2e16c827e1c", "4eaaebb1-beec-4ad1-bc7d-6dff532623b9", "55f90c2f-b3d9-40e1-a94b-05b1f22b540c", "7b54ed74-4e09-4e50-8bbd-c9071e5dcee0", "69b3937a-255a-4cbb-afde-df511e831326", "263dbfb8-733d-48d2-8ddd-019fa51a038a", "3c8c4dda-adc7-49c4-918e-1f8c92526c40", "7b0d1684-1d87-4ecc-8e46-4ecb3d53c5a5", "1308bc43-406e-4ad1-853f-ce983247f4c1", "7029af85-c352-4bd3-918f-397cb15e7e6b", "10507311-a704-4574-b4cf-852dc170b1ca", "6ccbc1f8-8fe8-4838-821b-a6a3e51758ba", "4ae3647e-3212-4ed9-a1d9-2d1f2f3bc39e", "187a6b96-4e4d-45d2-9fb2-6383ebbe6c7a", "7e1704f2-4f21-4a4d-ba2c-6ffab17873e6", "2b28fe6e-cc76-4dac-b856-5dd38cb8cea8", "ca5d36f5-3e04-49a6-bd8f-95ac9cc262a2", "9bc5e528-d84d-4a1f-b569-8aab2523f498", "778fc139-440e-43fd-958c-81003ad57ffa", "6d0e2393-bdf4-4f92-8fd6-3212c4831aa5", "9913ca6f-2fde-41d4-8028-e56292c34640", "dbe39f1c-b11c-442c-911b-59b8eb291c61", "ef8c3742-3d73-4be6-8e6f-1bfd0b297c4c", "bb9443fb-947a-43cf-b685-fe1d05fb5923", "b18d70fd-c046-44bb-b6d3-ba8dd0e828d8", "308cb633-d488-4c35-a177-04f6ccb10b14", "6a9a2c99-05d4-47cf-bcc7-029653a3c36c", "472ad890-c7cc-409d-afbb-cc379beb4586", "efcd56dc-2400-4137-ad1e-9c078b41cdcd", "e792eb85-0d3c-44bc-9947-c43c2596fba4", "d04e733b-9b58-4c35-bba4-d295c0bc47b4", "e582a142-e249-43d4-8565-e3710afd38fa", "e7dc17ff-e702-40f7-a1b0-188378eb1ba8", "07674c17-8809-4b1e-be3e-9376689fbc80", "f8b1079b-a389-4b0c-aa8f-d65e4ce178c7", "330d1985-3fcf-4400-a846-727accd46e20", "8f09b5b0-b269-40be-a3c9-8322d1b24bf3",
+"323afe07-5323-41dd-bb61-a05ee2ef7288", "d8b76491-40bc-4ccf-af3d-a5eedb70452c", "0d593675-f1a7-4650-80b7-60fb8f255138", "ce789d3b-6918-4f56-a40d-159634b4c0ef", "cc42cd9c-50d6-44bd-9b2c-275d918736ab", "f6e987fb-444d-4cd5-8f30-156981c6e91e", "893dcc27-be5b-4acc-8d63-2f4aa312b272", "c8ff1b4f-6239-43ee-a81f-a2d1f8d14259",
+"7f6e1a77-739d-4e5a-a221-c5a6ec05928e", "c9db8c2b-8fd2-4bff-94bb-a06c89cd4eb6", "e204eb4c-d4a8-4ebb-b2c7-b90e2cddeec2", "ccd67726-7edf-48a7-bb3a-24a06938ea13", "cdeb7fd0-49ce-4e0e-aa12-fcef20bfeb8d", "49942b5e-4cd1-0df1-34b3-6423090808a8", "d0524f0c-b3bb-cb64-2f26-6421ad7f4cdb", "cdfe6e01-097a-4ed0-9a39-b8e1ef6153ca", "bdfe6d44-c4f1-4b9b-a31a-b90bb5b3fc3a", "12468f33-57ed-45ab-8a9a-791333b718ee", "e15737d6-6dd5-4971-b0c4-c2ed9c580329")
+  
+  new_uuid <- c(
+"338b2b4d-66c4-4fb8-929d-06efd73ddcac", "c8f1ab2a-9ea9-41e7-8e68-5539ba6ddf68", "4808d7b1-0af8-4074-bc82-c4c332fa7e03", "be840c85-0910-4070-87de-c96ecff831db", "c11ee619-d3c4-4903-beed-29b219c38d7c", "4ec86db4-6ab5-434f-acd1-eea998812751", "4ec86db4-6ab5-434f-acd1-eea998812751", "ea6d57f9-f3d0-4908-8717-8b0be1f17f24", "ea6d57f9-f3d0-4908-8717-8b0be1f17f24", "25c16ef6-de86-4d49-b6bc-61045cc87e10", "bf286611-153c-4253-a005-c60e6fbdfd68", "dc7e64fa-6e5e-456e-9a50-6ad86a95a00d", "f2b72d80-1a73-48cf-90bb-aaf7e9031316", "cca6ad25-71ff-4d69-8c33-749d7b0fec69", "f53a6bec-731c-40b2-8950-0084402a3693", "d66f6816-26e6-4a9e-beb6-71aca7f561a0", "d66f6816-26e6-4a9e-beb6-71aca7f561a0", "6e89615d-75e3-4ea3-bf94-a0c0380b2a2f", "8f6dfe4b-aa1b-46f5-a9ad-c9425bb68af0", "f78bd3ae-e269-4a49-bc17-6c622478eb35", "dc7e64fa-6e5e-456e-9a50-6ad86a95a00d", "dce7553e-084c-466f-bf6c-064310b720ec", "3120578e-1b8d-4f03-a1a8-5a4357681c72", "3120578e-1b8d-4f03-a1a8-5a4357681c72", "9b794577-b98d-4944-bd24-084cacf6d889", "14af9c6f-8ee6-4b8f-bb9b-c20f120ef28c", "14af9c6f-8ee6-4b8f-bb9b-c20f120ef28c", "a01246b4-2c29-4ddc-840c-b49c796dbb69", "45f1b07a-3851-41e6-9b48-dc7292108cb9", "3bd8d3bf-0f3f-4226-9f51-ad1dd1bd180a", "d99dca0c-11ea-4298-8683-145584e1ef0f", "389f4d32-2278-428d-819a-4042b0ff29fa", "e00523d8-46dc-45eb-83d7-920289ed17da", "034887cc-3a8d-4892-869e-7685529daea1", "f336fabd-d272-440f-bfa8-01f7f54be92d", "9a0eb7ac-6b30-4472-a93a-c025ab570676", "f732a63f-8282-49c3-8012-1cf52942c5bf", "fb9004e0-8e23-46b0-82b4-4d5067fe495d", "e0946d73-2822-44a2-96d4-e56197810158", "8e81f2b0-7d69-4228-8f09-f6e0055fff8a", "e0946d73-2822-44a2-96d4-e56197810158", "dba3bac5-acb2-4058-a2ef-61691a500efe", "f77add1e-5733-4696-8f3b-35cd11bafaa3", "65e3b810-a829-4e54-bbdd-944d12ccbcf0", "d4120a4b-bbaa-43b7-9bc5-862e21a3726a", "96654eb8-9ce6-4f0e-b15b-2796c3581275", "a16adc78-e60e-45ea-a4a6-dcd07b767044", "8014b0d1-cf8e-48c3-abbb-860c932335d7", "8c1023e1-cd08-4fad-aff2-897405657739", "d0a71a92-5625-4189-b8fb-785abe91bc78", "e0e0607f-d87f-4806-a1f0-cb7f4c641e18", "e8591e9f-7785-4f17-9ec5-c620dee41df0", "267ace1c-0a8e-4ded-b0e6-cbf2d72ac364", "f7b74ceb-1df5-44a8-9267-783d383bae81", "f7b74ceb-1df5-44a8-9267-783d383bae81", "a5629530-d325-8354-b990-63f3bba5d1f6")
+  
+  new2_uuid <- c(
+"847fe6be-3983-444c-8447-dc04ea5e34d1", "065d78a7-e307-4e7a-be67-aef6f58f39bd", "b3aa60fb-b256-47a5-a9d2-63c2e6170c50", "d6d006bd-9b15-423f-84c6-f5b112b1f026", "be880e00-554d-4c3e-9de0-542713d67e66", "c12b8d43-79f1-4d9a-a5df-fd4c43874eaf", "8e216800-192c-4d90-85de-f03e5a6d7b2d", "e01c4a07-b1d6-4ba4-a797-9c7fecb0263a", "7c8fa54c-d625-45e1-ae4f-db529a2b2ff0", "9c8b8007-5925-400e-bf63-060750f580cb", "101c6c72-7e4e-48de-9650-cffdc5d6f893", "b944fdda-8c80-4aa4-ba67-9a4fe16aa886", "600dfe7b-4905-47e1-8405-d4c214620b3b", "c4e7555b-0d04-41ec-b5d7-bf09bf03d6c3", "bbaa5eb5-e033-412b-8021-5eecceccaa6b", "5ca6e7ec-da44-44a7-8108-1017d3b988a4", "3816b67f-1776-44e1-b236-d4483b4972cc", "3816b67f-1776-44e1-b236-d4483b4972cc", "35d66830-73ac-49fe-92bc-f25bb47bbee2", "b2b671d8-fef5-ee75-2501-63f3b5be13db", "b9771acd-cc71-4a25-9878-749fe28348c3", "744abcef-0c42-7989-d816-63f3b936f49d", "c6efa6d3-41dc-47fc-91ff-da24c0d56b81", "5d76e87f-2b6d-4aee-9b69-6de712cb6e72", "19871e5c-f8dc-4dcd-90ba-2eb249f857b5", "8e0d017d-23fa-4572-85df-7fc1ef3f9bf4", "8e0d017d-23fa-4572-85df-7fc1ef3f9bf4", "d63347b8-14bb-4850-8b8a-e435f633f777", "5e89c9d2-dd1e-4432-91fb-a89573e4b13c", "35ecc065-d2cb-49c1-9902-260dc43b9f58", "30d11e19-cde1-49ff-920d-042e86c1dd59", "d9fed284-e35a-436a-aabb-378678085842", "da287ffd-b911-4226-9e48-13646c69787f", "b3e1d79a-d656-489a-9ea7-095034ee6202", "c0343dc6-c49e-4ecf-96a0-8c94b6469b2f", "ea9b9459-e104-4fa2-9a89-0c7f58806795", "20309428-cd29-4289-9850-85614cb466f4", "38033c5f-86d2-438b-82fc-9bbc8db44c9b", "fbb92e32-ef17-4c24-8765-d39daae31389", "443373e4-364a-4550-82c9-9c4117d8d9e6", "455adba8-8839-4dfe-b251-c63eaaa87f09", "b3ddac2b-3e54-482b-a90d-ecaa81ec48fd", "2a5ade0d-3a6e-46b1-a107-32fa854b6c45", "de3e4baf-921f-49f5-9275-f7f2adbd3f58", "a067d014-061f-4515-acf0-268479c51380", "c06ff02f-eca7-4ba7-8340-e321e333b7e2", "bd992b9d-a741-41f6-9cb9-87859d60c8e8", "dafe10d4-59ae-4e52-bf3c-4e6705d89256", "51a07072-682f-4f36-9fa8-c9252b8557c9", "3abf4c9b-7d7c-4b6e-9ecd-f479bc8d66a3", "d3261f88-78fe-4c7a-99d6-e055de1063dc", "ccf7bf72-42d4-4faf-a8a0-a5046f607bd3",
+"6bf29107-7a1b-4cc8-8b60-d7eff956ce53", "5f21867b-6e2e-202d-42a1-6421aa396c32", "7a477943-7b0f-4a7b-a337-792f10a95635", "243a0564-1d95-4e72-9427-a927cb803650", "fb5bd79a-e590-4c3a-a17c-677594b57baa", "df827e49-59c7-4a12-98c2-867b0b021519", "df827e49-59c7-4a12-98c2-867b0b021519", "48cf674b-2101-4be3-8e1c-e75367a838f6", "ffcd464a-df31-4aa6-a072-282dbc3e882f", "1f07e894-e3c8-43ef-a764-324818e03da7", "cf138ab6-2f32-48f8-b73f-1a2b1c1267f6", "e97c7165-ff8c-43fe-943a-7d79241247cf", "ca2f4c23-bd47-4ae8-aa8d-3cc82704f727", "bd992b9d-a741-41f6-9cb9-87859d60c8e8", "2e6804db-c211-4228-9724-1c5e5d6e7a45", "6be25c3b-f00e-441a-bf9c-84f1314dc49a", "fdcc2103-8a3e-4d54-97da-6f39c86ec2c0", "9d5be91a-9864-4368-9117-edd0ec843051", "051bb72b-ea5a-4cb5-8cab-de8e103776ea", "4ad865f0-14ca-42f6-bd43-7f196ce6f1cd", "5fb6544d-71f7-4429-90b0-f88110c9b0be", "a3225241-aa21-4b95-a1fd-ecc9151c1922", "19b5e8a1-3efd-4d61-8972-506bf72940ef", "e3f7817b-da1e-4049-91d6-3054e7fcbec4", "4b9b63ae-fd37-4043-babf-c4a5e449db66", "3006dd52-8008-4399-b36a-d271478cfcc9", "5489c2e5-a60d-4a09-a6fd-383418a01d7f", "8f334513-6261-452e-8185-da1434f4c6b6",
+"0fdea92a-fa4e-46a3-86ae-91d0c4563225", "1e383e9b-e76b-470a-8888-5745bd20c4de", "206ac40b-a213-407a-8f5e-a315d132dbe1", "a77e18eb-439d-4a74-8a38-3bc64535b712", "fb074e7f-8388-4b9f-8870-a5677aefe937", "1a06c471-7010-4c9e-9e25-fd4f4c3a9a21", "300e1c48-0d04-493b-8625-7cd4184933e3", "7bbd2b04-09bf-406f-8b26-dd58d75094f2", "7a95c4ca-471a-4fa0-ad6e-c5e3abe1267e", "a8025463-0c56-4d2e-8c97-fb51e9cf310b", "04f2dc98-4e1c-46bb-9b55-741d1a3a9d34", "7278e91f-6e31-429f-acad-bf3ef4c66256",
+"80a2a1e7-800a-4fe0-9c7e-479d415f3db9", "377fcc72-d517-480f-8e36-2d1c5b24cb5c", "d705808f-7022-4398-9a62-c36890a420bd", "0b19204c-65ce-4210-b4d9-96ad1c730a24", "e4a9c174-a29d-43aa-b3c5-72a623062861", "a2b1d3a2-10db-437c-aa95-19ff75bc1b4b", "4c6e1ce8-771b-43f0-83e0-9045da51ca24", "22a5b0d1-6231-49b4-9137-53ea4d007b89", "22a5b0d1-6231-49b4-9137-53ea4d007b89", "9712499d-13da-4f3a-9fcb-1d17592b26e5", "b9c287c1-9d05-4ade-bad6-14e1f4280cf0", "6ce7c927-b5bf-4fa6-be75-d643b3c9172e", "316f7afe-5935-477a-8a63-23c70d9dc69b", "7a477943-7b0f-4a7b-a337-792f10a95635", "7a477943-7b0f-4a7b-a337-792f10a95635", "23c7b94c-8164-4b91-9d04-36a924470705", "270e5628-9205-4ed0-b775-73adba7f8820", "9ec34aa3-e6cc-4162-af15-c4a4f57bbd8d", "9ec34aa3-e6cc-4162-af15-c4a4f57bbd8d")
+
+contact.translate.id <- data.frame(old_uuid = c(old_uuid,old2_uuid), new_uuid = c(new_uuid,new2_uuid))
+
+contact.translate.id <- contact.translate.id %>%
+  mutate(date_modified=rep(now(),n()),modified_user_id=rep("4cde6014-5735-b6a8-2975-63e1844134be",n()))
+
+contact.translate.id
+
+```
+``` {r update-flourish}
+# Make a database connection to Flourish
+
+con <- flourish.connection()
+
+# Allow Tables to be loaded from R
+
+dbSendQuery(con, "SET GLOBAL local_infile = true;")
+
+# dbSendQuery(con, 'DROP TABLE temp_contact_translate_id;')
+dbWriteTable(con, value = contact.translate.id, name = 'temp_contact_translate_id', append = F, row.names = F)
+
+# Update Members associated with contacts
+
+dbSendQuery(con, "UPDATE contacts
+                     INNER JOIN temp_contact_translate_id ON
+                         contacts.contact_id_c = temp_contact_translate_id.old_uuid
+                     SET contacts.date_modified = temp_contact_translate_id.date_modified,
+                         contacts.modified_user_id = temp_contact_translate_id.modified_user_id,
+                         contacts.contact_id_c = temp_contact_translate_id.new_uuid;")
+
+# Update Members associated with referring agencies
+
+dbSendQuery(con, "UPDATE contacts
+                     INNER JOIN temp_contact_translate_id ON
+                         contacts.referrer_id_c = temp_contact_translate_id.old_uuid
+                     SET contacts.date_modified = temp_contact_translate_id.date_modified,
+                         contacts.modified_user_id = temp_contact_translate_id.modified_user_id,
+                         contacts.referrer_id_c = temp_contact_translate_id.new_uuid;")
+
+# Update Supports associated with staff
+
+dbSendQuery(con, "UPDATE flo_supports
+                     INNER JOIN temp_contact_translate_id ON
+                         flo_supports.sa_contacts_2_id = temp_contact_translate_id.old_uuid
+                     SET flo_supports.date_modified = temp_contact_translate_id.date_modified,
+                         flo_supports.modified_user_id = temp_contact_translate_id.modified_user_id,
+                         flo_supports.sa_contacts_2_id = temp_contact_translate_id.new_uuid;")
+
+# Update Goals and Plans associated with staff
+
+dbSendQuery(con, "UPDATE sa_goals
+                     INNER JOIN temp_contact_translate_id ON
+                         sa_goals.contact_2_id = temp_contact_translate_id.old_uuid
+                     SET sa_goals.date_modified = temp_contact_translate_id.date_modified,
+                         sa_goals.modified_user_id = temp_contact_translate_id.modified_user_id,
+                         sa_goals.contact_2_id = temp_contact_translate_id.new_uuid;")
+
+# Update Progress Notes associated with staff
+
+dbSendQuery(con, "UPDATE flo_progress_notes
+                     INNER JOIN temp_contact_translate_id ON
+                         flo_progress_notes.contact_2_id = temp_contact_translate_id.old_uuid
+                     SET flo_progress_notes.date_modified = temp_contact_translate_id.date_modified,
+                         flo_progress_notes.modified_user_id = temp_contact_translate_id.modified_user_id,
+                         flo_progress_notes.contact_2_id = temp_contact_translate_id.new_uuid;")
+
+# Note: Employment associated with employers (c2_employer_id)
+
+dbSendQuery(con, "UPDATE sa_employment
+                     INNER JOIN temp_contact_translate_id ON
+                         sa_employment.employer_id = temp_contact_translate_id.old_uuid
+                     SET sa_employment.date_modified = temp_contact_translate_id.date_modified,
+                         sa_employment.modified_user_id = temp_contact_translate_id.modified_user_id,
+                         sa_employment.employer_id = temp_contact_translate_id.new_uuid;")
+
+# Update Outreach associated with staff (person1_c)
+
+dbSendQuery(con, "UPDATE sa_flourish_reach_out
+                     INNER JOIN temp_contact_translate_id ON
+                         sa_flourish_reach_out.person1_c = temp_contact_translate_id.old_uuid
+                     SET sa_flourish_reach_out.date_modified = temp_contact_translate_id.date_modified,
+                         sa_flourish_reach_out.modified_user_id = temp_contact_translate_id.modified_user_id,
+                         sa_flourish_reach_out.person1_c = temp_contact_translate_id.new_uuid;")
+
+# Update Outreach associated with staff (person2_c)
+
+dbSendQuery(con, "UPDATE sa_flourish_reach_out
+                     INNER JOIN temp_contact_translate_id ON
+                         sa_flourish_reach_out.person2_c = temp_contact_translate_id.old_uuid
+                     SET sa_flourish_reach_out.date_modified = temp_contact_translate_id.date_modified,
+                         sa_flourish_reach_out.modified_user_id = temp_contact_translate_id.modified_user_id,
+                         sa_flourish_reach_out.person2_c = temp_contact_translate_id.new_uuid;")
+
+# Update Attendance associated with contacts
+
+dbSendQuery(con, "UPDATE sa_flourish_daily_attendance
+                     INNER JOIN temp_contact_translate_id ON
+                         sa_flourish_daily_attendance.contact_2_id = temp_contact_translate_id.old_uuid
+                     SET sa_flourish_daily_attendance.date_modified = temp_contact_translate_id.date_modified,
+                         sa_flourish_daily_attendance.modified_user_id = temp_contact_translate_id.modified_user_id,
+                         sa_flourish_daily_attendance.contact_2_id = temp_contact_translate_id.new_uuid;")
+
+# Update Gifts associated with donors
+
+dbSendQuery(con, "UPDATE flo_gifts
+                     INNER JOIN temp_contact_translate_id ON
+                         flo_gifts.contact_2_id = temp_contact_translate_id.old_uuid
+                     SET flo_gifts.date_modified = temp_contact_translate_id.date_modified,
+                         flo_gifts.modified_user_id = temp_contact_translate_id.modified_user_id,
+                         flo_gifts.contact_2_id = temp_contact_translate_id.new_uuid;")
+
+# Update Email Relationships associated with contacts
+
+dbSendQuery(con, "UPDATE email_addr_bean_rel
+                     INNER JOIN temp_contact_translate_id ON
+                         email_addr_bean_rel.bean_id = temp_contact_translate_id.old_uuid
+                     SET email_addr_bean_rel.date_modified = temp_contact_translate_id.date_modified,
+                         email_addr_bean_rel.bean_id = temp_contact_translate_id.new_uuid;")
+
+dbSendQuery(con, 'DROP TABLE temp_contact_translate_id;')
+dbDisconnect(con)
+```

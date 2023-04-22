@@ -1,0 +1,169 @@
+---
+title: "Synch Member Contact Data"
+output:
+  html_document:
+    css: "../../styles/styles.css"
+---
+```{r setup,echo=F,message=F,warning=F}
+source("../setup.R")
+```
+```{r flourish}
+
+member.cols <-c("flo_nickname_preferred_name_c", "first_name","last_name","phone_home","phone_mobile",
+                "phone_other","phone_work","photo","primary_address_street","primary_address_city",
+                "primary_address_state","primary_address_postalcode","primary_address_country",
+                "flo_primary_phone", "flo_secondary_phone")
+
+contact.cols <- c("contact2_nickname","first_name","last_name","phone_home","phone_mobile",
+                "phone_other","phone_work","photo","primary_address_street","primary_address_city",
+                "primary_address_state","primary_address_postalcode","primary_address_country",
+                "c2_primary_phone", "c2_secondary_phone")
+
+synch.cols <- data.frame(member.cols=member.cols, contact.cols=contact.cols)
+synch.cols
+
+members <- get.members()
+
+contacts <- get.contacts() %>%
+  filter(grepl("Member", c2_groups)) %>%
+  mutate(ContactID = id)
+
+tab <- members %>%
+  anti_join(contacts, by=c("contact_id_c"="id")) %>%
+  select(id,first_name, last_name)
+ 
+ft <- goc.table(tab, paste0(nrow(tab), " mismatched members and records"))
+ft
+```
+``` {r members-to-contacts}
+tab <- members %>%
+  inner_join(contacts, by=c("contact_id_c"="id"))
+
+  
+# ft <- goc.table(tab, paste0(nrow(tab)," Members updated more recently than corresponding contact"))
+# ft
+
+tab2 <- tab %>%
+  filter(flo_nickname_preferred_name_c !=  contact2_nickname) %>%
+  select(id, first_name.x, last_name.x, flo_nickname_preferred_name_c, ContactID, contact2_nickname)
+
+ft <- goc.table(tab2, paste0(nrow(tab2), " Nicknames discrepancies"))
+ft
+
+tab2 <- tab %>%
+  filter(first_name.x !=  first_name.y) %>%
+  select(id, first_name.x, last_name.x, first_name.x, ContactID, first_name.y)
+
+ft <- goc.table(tab2, paste0(nrow(tab2), " First names discrepancies"))
+ft
+
+tab2 <- tab %>%
+  filter(last_name.x !=  last_name.y) %>%
+  select(id, first_name.x, last_name.x, last_name.x, ContactID, last_name.y)
+
+ft <- goc.table(tab2, paste0(nrow(tab2), " Last names discrepancies"))
+ft
+
+tab2 <- tab %>%
+  filter(flo_primary_phone !=  c2_primary_phone) %>%
+  select(id, first_name.x, last_name.x, flo_primary_phone, ContactID, c2_primary_phone)
+
+ft <- goc.table(tab2, paste0(nrow(tab2), " Primary phone discrepancies"))
+ft
+
+tab2 <- tab %>%
+  filter(flo_secondary_phone !=  c2_secondary_phone) %>%
+  select(id, first_name.x, last_name.x, flo_secondary_phone, ContactID, c2_secondary_phone)
+
+ft <- goc.table(tab2, paste0(nrow(tab2), " Secondary phone discrepancies"))
+ft
+
+tab2 <- tab %>%
+  filter(phone_home.x !=  phone_home.y) %>%
+  select(id, first_name.x, last_name.x, phone_home.x, ContactID, phone_home.y)
+
+ft <- goc.table(tab2, paste0(nrow(tab2), " Home phones discrepancies"))
+ft
+
+tab2 <- tab %>%
+  filter(phone_mobile.x !=  phone_mobile.y) %>%
+  select(id, first_name.x, last_name.x, phone_mobile.x, ContactID, phone_mobile.y)
+
+ft <- goc.table(tab2, paste0(nrow(tab2), " Mobile phones discrepancies"))
+ft
+
+tab2 <- tab %>%
+  filter(phone_work.x !=  phone_work.y) %>%
+  select(id, first_name.x, last_name.x, phone_work.x, ContactID, phone_work.y)
+
+ft <- goc.table(tab2, paste0(nrow(tab2), " Work phones discrepancies"))
+ft
+
+
+tab2 <- tab %>%
+  filter(phone_other.x !=  phone_other.y) %>%
+  select(id, first_name.x, last_name.x, phone_other.x, ContactID, phone_other.y)
+
+ft <- goc.table(tab2, paste0(nrow(tab2), " Other phones discrepancies"))
+ft
+
+
+tab2 <- tab %>%
+  filter(primary_address_street.x !=  primary_address_street.y) %>%
+  select(id, first_name.x, last_name.x, primary_address_street.x, ContactID, primary_address_street.y)
+
+ft <- goc.table(tab2, paste0(nrow(tab2), " Street Address discrepancies"))
+ft
+
+tab2 <- tab %>%
+  filter(primary_address_city.x !=  primary_address_city.y) %>%
+  select(id, first_name.x, last_name.x, primary_address_city.x, ContactID, primary_address_city.y)
+
+ft <- goc.table(tab2, paste0(nrow(tab2), " City discrepancies"))
+ft
+
+tab2 <- tab %>%
+  filter(primary_address_state.x !=  primary_address_state.y) %>%
+  select(id, first_name.x, last_name.x, primary_address_state.x, ContactID, primary_address_state.y)
+
+ft <- goc.table(tab2, paste0(nrow(tab2), " State discrepancies"))
+ft
+
+tab2 <- tab %>%
+  filter(primary_address_postalcode.x !=  primary_address_postalcode.y) %>%
+  select(id, first_name.x, last_name.x, primary_address_postalcode.x, ContactID, primary_address_postalcode.y)
+
+ft <- goc.table(tab2, paste0(nrow(tab2), " Zip Code discrepancies"))
+ft
+
+tab2 <- tab %>%
+  filter(primary_address_country.x !=  primary_address_country.y) %>%
+  select(id, first_name.x, last_name.x, primary_address_country.x, ContactID, primary_address_country.y)
+
+ft <- goc.table(tab2, paste0(nrow(tab2), " Country discrepancies"))
+ft
+
+```
+``` {r do-update}
+# Make a database connection to Flourish
+
+# con <- flourish.connection()
+# 
+# # Allow Tables to be loaded from R
+# 
+# dbSendQuery(con, "SET GLOBAL local_infile = true;")
+# 
+# # Create temporary table
+# 
+# dbWriteTable(con, value = relink.member.to.contact.data, name = 'temp_relink_members', append = F, row.names = F)
+# 
+# dbSendQuery(con, 'UPDATE contacts
+#                      INNER JOIN temp_relink_members ON
+#                          contacts.id = temp_relink_members.id
+#                      SET contacts.date_modified = temp_relink_members.date_modified,
+#                          contacts.modified_user_id = temp_relink_members.modified_user_id,
+#                          contacts.contact_id_c = temp_relink_members.contact_id_c;')
+# 
+# dbSendQuery(con, 'DROP TABLE temp_relink_members;')
+# dbDisconnect(con)
+```

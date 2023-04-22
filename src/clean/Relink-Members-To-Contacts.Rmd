@@ -1,0 +1,62 @@
+---
+title: "Relink Members to Contacts"
+output:
+  html_document:
+    css: "../styles/stles.css"
+---
+```{r setup,echo=F,message=F,warning=F}
+source("../setup.R")
+```
+Member
+```{r member}
+
+members <- get.members() %>%
+  filter(last_name == "Krome") %>%
+  select(id, last_name, first_name, contact_id_c)
+members
+```
+Contact
+```{r contact}
+
+contacts <- get.contacts() %>%
+  filter(last_name == "Krome") %>%
+  select(id, last_name, first_name, contact2_full_name)
+contacts
+```
+Link Data
+```{r link-data}
+
+relink.member.to.contact.data <- data.frame(
+  id = c(
+  "31fea936-3035-7dac-5ea5-63fcda6d5920", "5be18d8c-d5b7-e84a-4ec5-63f432de7e44", "4d9a036b-5075-54d4-0076-63f3e55e6039", "9fc74f34-8515-ed8f-b369-63f945042a1a",
+  "bc02bcee-5287-9500-78f1-640904ebd932", "309dc131-92f9-4751-a750-a288127c78a1", "31ddd31b-54b7-4786-b197-50174e51e844"
+  ), 
+  contact_id_c = c(
+    "e5f4a5e5-2bf9-e7b0-9a22-63fcdcf6029a", "a8c1ad40-8549-4f17-bd63-2fb6740edb40", "509c565d-0b31-4fbc-ac0b-796451e75c16", "60fa82ff-d0a3-4d27-bd51-b830beeab8fa",
+    "7c35ae01-85b2-42b9-e9f7-6409046d61c4", "da0c7d2a-6998-4b9e-8902-1bb869bb63db", "affda818-7c5b-4e9d-9647-0b320b0009e8"
+    ),date_modified=now(),modified_user_id="4cde6014-5735-b6a8-2975-63e1844134be")
+relink.member.to.contact.data
+```
+``` {r do-update}
+# Make a database connection to Flourish
+
+con <- flourish.connection()
+
+# Allow Tables to be loaded from R
+
+dbSendQuery(con, "SET GLOBAL local_infile = true;")
+
+# Create temporary table
+
+dbWriteTable(con, value = relink.member.to.contact.data, name = 'temp_relink_members', append = F, row.names = F)
+
+dbSendQuery(con, 'UPDATE contacts
+                     INNER JOIN temp_relink_members ON
+                         contacts.id = temp_relink_members.id
+                     SET contacts.date_modified = temp_relink_members.date_modified,
+                         contacts.modified_user_id = temp_relink_members.modified_user_id,
+                         contacts.contact_id_c = temp_relink_members.contact_id_c;')
+
+dbSendQuery(con, 'DROP TABLE temp_relink_members;')
+dbDisconnect(con)
+```

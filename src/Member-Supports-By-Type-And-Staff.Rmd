@@ -1,0 +1,73 @@
+---
+title: "Supports by Member"
+output:
+  html_document:
+    css : "../styles/styles.css"
+---
+
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+```{r supports}
+
+vars <- list(
+
+  c("full_name", "Name"),
+  c("Benefits", "Bene fits"),
+  c("Culinary", "Culi nary"),
+  c("Education_in_house", "Edu GOC"),
+  c("Education_pre_enrollment", "Edu pre"),
+  c("Education_post_enrollment", "Edu post"),
+  c("Employment_readiness", "Emp pre"),
+  c("Employment_IE", "Emp IE"),
+  c("Employment_SE", "Emp SE"),
+  c("Employment_TE", "Emp TE"),
+  c("Development", "Dev"),
+  c("Garden", "Gar den"),
+  c("Housing", "Hou sing"),
+  c("Janitorial", "Jani torial"),
+  c("Media", "Me dia"),
+  c("Mediation", "Medi ation"),
+  c("Office", "Off ice"),
+  c("Referral", "Ref erral"),
+  c("Social", "Soc ial"),
+  c("Spiritual", "Spiri tual"),
+  c("Transportation_education", "Van Edu"),
+  c("Transportation_employment", "Van Emp"),
+  c("Transportation_goc", "Van GOC"),
+  c("Transportation_health", "Van Hlth"),
+  c("Transportation_wellness", "Van Well"),
+  c("Unknown", "Unk"),
+  c("Wellness", "Well ness"),
+  c("Work_ordered_day", "WOD"),
+  c("total", "Total")
+)
+
+translate.support.type <- data.frame(code=sapply(vars, function(x) x[1]),display=sapply(vars, function(x) x[2]))
+
+
+supports <- get.supports(with.members=T) %>%
+  inner_join(get.contacts(), by=c("sa_contacts_2_id"="id")) %>%
+  inner_join(translate.support.type, by=c("flo_support_type"="code")) %>%
+  mutate(StaffName = paste0(first_name.y, " ", last_name.y)) %>%
+  mutate(Member = paste0(last_name.x, ", ", first_name.x)) %>%
+  mutate(Date = as_date(flo_support_date)) %>%
+  rename(Type = display, Duration=flo_support_duration) %>%
+  mutate(Type = gsub(" ","\n", Type)) %>%
+  arrange(desc(Date)) %>%
+  select(Date, StaffName, Type, Duration, Member)
+
+nrow(supports)
+ft <- goc.table(head(supports,n=50))
+ft
+
+day <- floor_date(now() - days(11), unit = "days")
+dat <- supports %>% filter(Date == day)
+
+ggplot(dat, aes(Type)) +
+  ggtitle(paste("Member Supports by Type and Staff", format(day, "%B %d, %Y"), collapse = " ")) +
+  ylab("") +
+  xlab("Support Type") +
+  geom_bar(aes(fill = StaffName)) +
+  theme(plot.title = element_text(hjust = 0.5, size = rel(1), face = "bold"))
+```

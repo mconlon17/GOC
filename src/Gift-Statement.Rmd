@@ -1,0 +1,53 @@
+---
+title: GOC Gift Statement
+output:
+    html_document:
+        css: "../styles/styles.css"
+params:
+  name: "Contact-01164"
+  year: "2022"
+---
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+```{r gift-statement}
+contact <- get.contacts() %>%
+  filter(contact2_flourish_number == params$name) %>%
+  select(id, c2_salutation, contact2_full_name, email_address) %>%
+  left_join(get.gifts(), by = c("id" = "contact_2_id")) %>%
+  filter(year(flo_gift_date) == params$year) %>%
+  select(id, c2_salutation, contact2_full_name, email_address, flo_gift_date, flo_gift_amount, flo_gift_payment_method)
+```
+
+Dear `r contact[1,"c2_salutation"]`,
+
+Thank you for your generous support over the past year.  Last year we served 93 adults living with mental illness at the GOC.  None of this work is possible without you!
+</br>
+```{r statement}
+total <- sum(contact[,"flo_gift_amount"])
+
+contact <- contact %>%
+  select(Date=flo_gift_date, Amount=flo_gift_amount, Payment=flo_gift_payment_method) %>%
+  mutate(Amount = round(Amount, 2)) %>%
+  rbind(data.frame(Date="Total",Amount=total, Payment=""))
+    
+ft <- goc.table(contact) %>%
+  set_formatter_type(fmt_double="%.2f") %>%
+  colformat_num(j = 2, big.mark = ",", prefix = "$", nsmall=2) 
+ft
+```
+</br>
+Please note that if no goods or services were provided to you etc., etc.  
+
+We sincerely appreciate etc., etc.
+
+Warmest Regards,
+</br>
+</br>
+</br>
+</br>
+Deidra Simon</br>
+Executive Director</br>
+Gainesville Opportunity Center
+
+

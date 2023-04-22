@@ -1,0 +1,46 @@
+---
+title: "Gift Amounts by Campaign"
+output:
+    html_document:
+        css: "../styles/styles.css"
+---
+
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+library(tidyverse)
+```
+
+```{r gifts}
+gifts <- get.gifts()
+
+tab <- gifts %>%
+  filter(flo_gift_payment_method != "in_kind") %>%
+  filter(!(flo_gift_amount %in% c(1030.18, 3508.94, 6500, 365.91, 421.21, 545.94, 723.68, 814))) %>%
+  mutate(Amount = as.character(flo_gift_amount)) %>%
+  mutate(Amount = ifelse(0 <= flo_gift_amount & flo_gift_amount <= 10, "    $1-$10", Amount)) %>%
+  mutate(Amount = ifelse(11 <= flo_gift_amount & flo_gift_amount <= 49, "   $11-$49", Amount)) %>%
+  mutate(Amount = ifelse(50 == flo_gift_amount, "   $50", Amount)) %>%
+  mutate(Amount = ifelse(51 <= flo_gift_amount & flo_gift_amount <= 99, "   $51-$99", Amount)) %>%
+  mutate(Amount = ifelse(101 <= flo_gift_amount & flo_gift_amount <= 199, "  $101-$199", Amount)) %>%
+  mutate(Amount = ifelse(100 == flo_gift_amount, "  $100", Amount)) %>%
+  mutate(Amount = ifelse(200 == flo_gift_amount, "  $200", Amount)) %>%
+  mutate(Amount = ifelse(250 == flo_gift_amount, "  $250", Amount)) %>%
+  mutate(Amount = ifelse(251 <= flo_gift_amount & flo_gift_amount <= 499, "  $251-$499", Amount)) %>%
+  mutate(Amount = ifelse(500 == flo_gift_amount, "  $500", Amount)) %>%
+  mutate(Amount = ifelse(501 <= flo_gift_amount & flo_gift_amount <= 999, "  $501-$999", Amount)) %>%
+  mutate(Amount = ifelse(1000 == flo_gift_amount, " $1000", Amount)) %>%
+  mutate(Amount = ifelse(1500 == flo_gift_amount, " $1500", Amount)) %>%
+  mutate(Amount = ifelse(2000 == flo_gift_amount, " $2000", Amount)) %>%
+  mutate(Amount = ifelse(2500 == flo_gift_amount, " $2500", Amount)) %>%
+  mutate(Amount = ifelse(3000 == flo_gift_amount, " $3000", Amount)) %>%
+  mutate(Amount = ifelse(5000 == flo_gift_amount, " $5000", Amount)) %>%
+  mutate(Amount = ifelse(15000 == flo_gift_amount, "$15000", Amount)) %>%
+  group_by(flo_gift_campaign, Amount) %>%
+  tally() %>%
+  spread(Amount, n) %>%
+  filter(!(flo_gift_campaign %in% c("2022_satch_squared_rufc", "2022_carwash", "2021_carwash", "2021_belk")))
+
+
+ft <- goc.table(tab, "Gift Amounts by Campaign")
+ft
+```

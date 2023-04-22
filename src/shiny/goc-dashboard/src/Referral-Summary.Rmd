@@ -1,0 +1,39 @@
+---
+title: Referral Summary
+output:
+    html_document:
+        css: "../styles/styles.css"
+---
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+```{r referral-summary}
+referrals <- get.members() %>%
+  filter(!is.na(referral_source_id_c) & referral_source_id_c != "") %>%
+    select(id, referral_source_id_c, flo_application_date)
+
+referral.count <- referrals %>%
+    group_by(referral_source_id_c) %>%
+    tally()
+
+referral.recent <- referrals %>%
+    group_by(referral_source_id_c) %>%
+    arrange(desc(flo_application_date)) %>%
+    filter(row_number() == 1)
+
+referrals <- referral.count %>%
+    left_join(referral.recent, by = "referral_source_id_c")
+
+contacts <- get.contacts() %>%
+    select(id, contact2_full_name)
+
+referrals <- referrals %>%
+    inner_join(contacts, by = c("referral_source_id_c"="id")) %>%
+    select(contact2_full_name, n, flo_application_date) %>%
+    rename(`Name` = contact2_full_name, `Referrals` = n, `Most Recent` = flo_application_date )
+
+ft <- goc.table(referrals)
+ft
+
+    
+```

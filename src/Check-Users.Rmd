@@ -1,0 +1,22 @@
+---
+title: Check Users
+output:
+    html_document:
+        css: "../styles/styles.css"
+params:
+  date: !r Sys.Date()
+---
+```{r setup,echo=FALSE,message=FALSE,warning=FALSE}
+source("setup.R")
+```
+
+```{r check-users}
+users <- get.users() %>%
+  filter(employee_status == "Active") %>%
+  select(user_name, pwd_last_changed, date_entered, date_modified, first_name, last_name, title, phone_work, ) %>%
+  arrange(desc(date_entered))
+  
+
+ft <- goc.table(users, "Flourish Users")
+ft
+```

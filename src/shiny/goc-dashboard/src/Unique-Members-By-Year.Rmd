@@ -1,0 +1,22 @@
+---
+title: Unique Members By Year
+output:
+    html_document:
+        css: "../styles/styles.css"
+---
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+```{r members}
+attendance <- get.attendance() %>%
+    mutate(Year = year(da_date_of_attendance)) %>%
+    left_join(get.contacts(), by=c("contact_2_id"="id")) %>%
+    filter(grepl("Member", c2_groups)) %>%
+    group_by(Year, contact_2_id) %>%
+    tally() %>%
+    group_by(Year) %>%
+    tally()
+
+ft <- goc.table(attendance, "Unique Members seen by year")
+ft
+```

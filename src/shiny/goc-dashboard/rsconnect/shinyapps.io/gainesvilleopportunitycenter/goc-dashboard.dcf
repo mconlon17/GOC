@@ -1,0 +1,14 @@
+name: goc-dashboard
+title: goc-dashboard
+username:
+account: gainesvilleopportunitycenter
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 8542470
+bundleId: 7119874
+url: https://gainesvilleopportunitycenter.shinyapps.io/goc-dashboard/
+when: 1682113125.87667
+lastSyncTime: 1682113125.87668
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .RData 3|img/.DS_Store

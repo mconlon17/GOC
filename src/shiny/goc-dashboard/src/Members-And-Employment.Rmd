@@ -1,0 +1,47 @@
+---
+title: Members with Employment Supports, Last 90 Days
+output:
+    html_document:
+        css: "../styles/styles.css"
+params:
+  date: !r Sys.Date()
+---
+```{r setup,echo=FALSE,message=FALSE,warning=FALSE}
+source("setup.R")
+```
+A first attempt at an employment report.  We list members who have any employment supports, notes, or employment records.
+```{r get-data}
+members <- get.members() %>%
+  select(id, first_name, last_name)
+
+# ft <- goc.table(members, "Members")
+# ft
+
+employment.supports <- get.supports() %>%
+  filter(flo_support_date >= params$date - months(3)) %>%
+  filter(flo_support_type == "Employment_readiness" | 
+         flo_support_type == "Employment_IE" | 
+         flo_support_type == "Employment_SE" | 
+         flo_support_type == "Employment_TE") %>%
+  select(id, flo_support_date, flo_support_type)
+
+
+ft <- goc.table(employment.supports, "Employment Supports, last 90 days")
+ft
+
+support.rel <- get.table("flo_supports_contacts_c") %>%
+    select("flo_supports_contactsflo_supports_ida","flo_supports_contactscontacts_idb")
+
+# support id is flo_supports_contactsflo_supports_ida
+# member id is flo_supports_contactscontacts_idb
+
+
+tab <- members %>%
+  inner_join(support.rel,by=c("id"="flo_supports_contactscontacts_idb")) %>%
+    inner_join(employment.supports,by=c("flo_supports_contactsflo_supports_ida"="id")) %>%
+    select(-id, -flo_supports_contactsflo_supports_ida) %>%
+    arrange(last_name, first_name,flo_support_date)
+
+ft <- goc.table(tab, "Members with employment supports, last 90 days")
+ft
+```

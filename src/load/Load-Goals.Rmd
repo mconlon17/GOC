@@ -1,0 +1,254 @@
+---
+title: "Load Goals and Plans"
+header-includes:
+- \usepackage{pdflscape}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
+output:
+  html_document: default
+  word_document: 
+    reference_docx: word-styles.docx
+    keep_md: yes
+  pdf_document: default
+---
+
+```{r setup,echo=F,message=F,warning=F}
+knitr::opts_chunk$set(echo=FALSE, message=FALSE,warning=FALSE,fig.width=14)
+load("~/Documents/GOC/.RData")
+library(knitr)
+library(rmarkdown)
+library(tidyverse)
+library(kableExtra)
+library(lubridate)
+library(stringr)
+library(RMySQL)
+library(flextable)
+library(uuid)
+set_flextable_defaults(font.size = 10, theme_fun = theme_zebra, padding = 6, background.color = "#EFEFEF")
+```
+# Extract, Transform and Load. From Applistic to Flourish. Intended for one-time use.
+
+Goals are loaded after contacts to be able to associate goals with their Member and Staff Member.
+
+The Applistic action plan goal is like the Flourish goal. The Applistic action plan is a "header" that contains the member and staff member references.
+```{r extract_goals}
+
+action_plan_goals <- read_csv("../data/applistic-final/action_plan_goals.csv") %>%
+    rename(ActionPlanID=RelatedActionPlanID) %>%
+    mutate(CompletionDueDate=ifelse(startsWith(CompletionDueDate,"####"),NA,CompletionDueDate)) %>%
+    mutate(`Record Creation Date`=ifelse(startsWith(`Record Creation Date`,"####"),NA,`Record Creation Date`)) %>%
+    mutate(StartDate=mdy(StartDate)) %>%
+    
+    # Recode Goal Status
+    
+    mutate(GoalStatus=ifelse(is.na(GoalStatus),"Unknown",GoalStatus)) %>%
+    mutate(GoalStatus=ifelse(GoalStatus == "Goal Active","In_progress",
+                             ifelse(GoalStatus == "Goal Not Reached","Not_completed",
+                                    ifelse(GoalStatus == "Goal Reached","Finished","Unknown")))) %>%
+    
+    # Recode GoalType
+    
+    mutate(GoalType=ifelse(is.na(GoalType),"Unknown",GoalType)) %>%
+    mutate(GoalType=ifelse(GoalType == "Educational","Education", GoalType)) %>%
+    mutate(GoalType=ifelse(GoalType == "Employment / Education","Education", GoalType)) %>%
+    mutate(GoalType=ifelse(GoalType == "Financial","Financial", GoalType)) %>%
+    mutate(GoalType=ifelse(GoalType == "Health / Mental","Health_mental", GoalType)) %>%
+    mutate(GoalType=ifelse(GoalType == "Health / Physical","Health_physical", GoalType)) %>%
+    mutate(GoalType=ifelse(GoalType == "Living Situation","Housing", GoalType)) %>%
+    mutate(GoalType=ifelse(GoalType == "Personal Employment Plan","Employment", GoalType)) %>%
+    mutate(GoalType=ifelse(GoalType == "Social","Social", GoalType)) %>%
+    mutate(GoalType=ifelse(GoalType == "Spiritual / Recreational","Spiritual", GoalType)) %>%
+    
+    mutate(CompletionDueDate=mdy(CompletionDueDate)) %>%
+    mutate(CompletionDate=mdy(CompletionDate)) %>%
+    mutate(`Last Update`=mdy(`Last Update`)) %>%
+    mutate(`Record Creation Date`=mdy(`Record Creation Date`))
+
+action_plan_goals
+# ft <- goc.table(action_plan_goals,"Goals")
+# ft
+
+action_plans <- read_csv("../data/applistic-final/action_plans.csv") %>%
+     mutate(TargetCompletionDate=mdy(TargetCompletionDate)) %>%
+     mutate(ClosureDate=mdy(ClosureDate)) %>%
+     mutate(LastReview=mdy(LastReview)) %>%
+     mutate(LastUpdate=mdy(LastUpdate)) %>%
+     mutate(DateRecCreated=mdy(DateRecCreated))
+
+action_plans
+# ft <- goc.table(action_plans,"Plans")
+# ft
+
+goals <- action_plan_goals %>% 
+    left_join(action_plans, by="ActionPlanID") %>%
+    rename(GoalStatus=GoalStatus.x) %>%
+    mutate(MemberID=as.character(MemberID)) %>%
+    mutate(AdvisorID=as.character(AdvisorID))
+
+# goals
+# 
+# 
+# tab <- goals %>%
+#     group_by(GoalStatus) %>%
+#     tally()
+# tab <- goc.table(tab,"Goal Status")
+# tab
+# 
+# tab <- goals %>%
+#     group_by(GoalType) %>%
+#     tally()
+# tab <- goc.table(tab,"Goal Type")
+# tab
+
+# ft <- goc.table(goals,"Goals and Plans before joins")
+# ft
+
+```
+
+# Add a chunk here to join on the legacy MemberID to match the member
+```{r join-member-ids}
+# Get the members from Flourish
+con <- dbConnect(RMySQL::MySQL(),
+                       dbname = "gainesvillecrm",
+                       host = "3.136.184.221",
+                       port = 3306,
+                       user = "mikeconlon",
+                       password = "c8g8*uKkm4s4NM")
+
+members <- dbGetQuery(con, "SELECT * FROM contacts") %>%
+    rename(contact_id=id) %>%
+    select(contact_id,flo_external_id1_c)
+
+dbDisconnect(con)
+
+
+goals <- goals %>%
+    left_join(members,by=c("MemberID"="flo_external_id1_c"))
+
+# goals
+# ft <-goc.table(goals)
+# ft
+
+```
+
+# Add a chunk here to join on the contact_2_ids ids to match the staff member
+```{r join-contact-ids}
+# Get the contacts from Flourish
+con <- dbConnect(RMySQL::MySQL(),
+                       dbname = "gainesvillecrm",
+                       host = "3.136.184.221",
+                       port = 3306,
+                       user = "mikeconlon",
+                       password = "c8g8*uKkm4s4NM")
+
+contacts <- dbGetQuery(con, "SELECT * FROM sa_contacts_2") %>%
+    rename(contact_2_id=id) %>%
+    select(first_name,last_name,contact_2_id,contact2_applistic_number)
+
+dbDisconnect(con)
+
+# Renumber goes here
+
+staff <-data.frame(StaffName=c("Brett","Maggie","Kyanna","Nakeshia","Cristina","Sandy","Brett","Maggie","Rose Ann","Robert",
+                               "Kaitlyn","Mia","Kaitlyn","Paul","Deidra","Cristina","Kalya","Ouida","Roscoe","Jeff",
+                               "Debbie","Brian","Jill","Fey","Chris","Luis","Kerry","Joseph","Robert","Barry"),
+                  OldID=c("1469","1540","1633","1715","1729","1733","1822","1874","1964","1968",
+                          "2026","2072","2074","2100","2076","1655","1997","1698","1425","664",
+                          "1269","674","1326","1126","1154","1329","1408","312","625","649"),
+                  NewID=c("3835","4038","1633","1715","3796","1733","3835","4038","1964","4039",
+                          "4651","4553","4651","2100","4641","3796","3212","3907","3410","4336",
+                          "4200","4025","3185","3998","4206","3603","3508","3837","3958","4130"))
+
+contacts <- contacts %>%
+    left_join(staff,by=c("contact2_applistic_number"="NewID")) %>%
+    mutate(contact2_applistic_number = ifelse(!is.na(contact2_applistic_number),
+                                              OldID,contact2_applistic_number)) %>%
+    filter(!is.na(contact2_applistic_number))
+    
+contacts[,c("first_name","last_name","contact2_applistic_number")]
+
+goals <- goals %>%
+    left_join(contacts,by=c("AdvisorID"="contact2_applistic_number"))
+
+ft <- goc.table(goals)
+ft
+
+```
+
+# Tranform goals and plans
+
+```{r transform_goals}
+
+  
+## [10] "contact_id"             "contact_2_id"           "flo_goal_creation_date"
+## [13] "flo_goal_description"   "flo_goal_start_date"    "flo_goal_due_date"     
+## [16] "flo_goal_type"          "flo_goal_status"        "flo_goal_action_plan"  
+## [19] "flo_goal_needs"         "flo_goal_staff_support" "flo_goal_other_support"
+
+transformed.goals <- goals %>%
+    
+    mutate(id = UUIDgenerate(n=n())) %>%
+    mutate(name = paste0("Goal-",seq(1,n()))) %>%
+    mutate(date_entered = Sys.time()) %>%
+    mutate(date_modified = Sys.time()) %>%
+    mutate(modified_user_id = "4cde6014-5735-b6a8-2975-63e1844134be") %>% # UUID for Mike Conlon
+    mutate(created_by = "4cde6014-5735-b6a8-2975-63e1844134be") %>%
+    mutate(description = "") %>%
+    mutate(deleted = 0) %>%
+    mutate(assigned_user_id = "") %>%
+
+    rename(flo_goal_creation_date = `Record Creation Date`) %>%
+    rename(flo_goal_description = Objective) %>%
+    rename(flo_goal_due_date = TargetCompletionDate) %>%
+    rename(flo_goal_start_date = StartDate) %>%
+    rename(flo_goal_end_date = CompletionDate) %>%
+    rename(flo_goal_type = GoalType) %>%
+    rename(flo_goal_status = GoalStatus) %>%
+    rename(flo_goal_action_plan = Action) %>%
+    rename(flo_goal_needs = Resource) %>%
+    rename(flo_goal_staff_support = ResponsiblePerson) %>%
+    rename(flo_goal_other_support = OtherHelp) %>%
+    
+    select("id","name","date_entered","date_modified","modified_user_id","created_by","description","deleted",
+           "assigned_user_id","contact_id","contact_2_id","flo_goal_creation_date","flo_goal_description",
+           "flo_goal_start_date","flo_goal_due_date","flo_goal_type","flo_goal_status","flo_goal_action_plan",
+           "flo_goal_needs","flo_goal_staff_support","flo_goal_other_support")
+
+ft <- goc.table(transformed.goals,"Goals Ready to Load")
+ft
+
+tab <- transformed.goals %>%
+    group_by(contact_2_id) %>%
+    tally()
+ft <- goc.table(tab)
+ft
+
+
+```
+
+
+# Connect to Flourish and write the goals and plans data to Flourish
+
+```{r load_goals}
+
+# Make a database connection to Flourish
+con <- dbConnect(RMySQL::MySQL(),
+                       dbname = "gainesvillecrm",
+                       host = "3.136.184.221",
+                       port = 3306,
+                       user = "mikeconlon",
+                       password = "c8g8*uKkm4s4NM")
+
+# Allow Tables to be loaded from R
+dbSendQuery(con, "SET GLOBAL local_infile = true;")
+
+# Load goals to Flourish replacing whatever is there. value is R, name is remote table
+
+dbGetQuery(con,"DELETE FROM sa_goals;")
+dbWriteTable(con, value = transformed.goals, name = 'sa_goals', append = T, row.names = F)
+
+# Drop the test table
+
+
+dbDisconnect(con)
+```

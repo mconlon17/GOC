@@ -1,0 +1,59 @@
+---
+title: Check Goals
+output:
+    html_document:
+        css: "../styles/styles.css"
+params:
+  date: !r Sys.Date()
+---
+```{r setup,echo=FALSE,message=FALSE,warning=FALSE}
+source("setup.R")
+```
+
+```{r lapsed-goals}
+goals <- get.goals() %>%
+  mutate(flo_goal_creation_date = as_date(flo_goal_creation_date)) %>%
+  mutate(flo_goal_end_date = as_date(flo_goal_end_date)) %>%
+  filter(flo_goal_creation_date < now() - years(1)) %>%
+  left_join(get.members(active.only = T)[, c("id", "first_name", "last_name")], by = c("contact_id" = "id")) %>%
+  mutate(Member = paste0(first_name, " ", last_name)) %>%
+  mutate(flo_goal_creation_date = as_date(flo_goal_creation_date)) %>%
+  select(-first_name, -last_name) %>%
+  left_join(get.contacts()[, c("id", "first_name", "last_name")], by = c("contact_2_id" = "id")) %>%
+  mutate(Staff = paste0(first_name, " ", last_name)) %>%
+  select(Member, Staff, name, flo_goal_creation_date, flo_goal_end_date, flo_goal_description, flo_goal_type, flo_goal_status) %>%
+  rename(
+    `Goal Name` = name, `Creation Date` = flo_goal_creation_date, `End Date` = flo_goal_end_date,
+    Goal = flo_goal_description, Type = flo_goal_type, Status = flo_goal_status
+  ) %>%
+  arrange(Staff)
+
+tab <- goals %>%
+  filter(Staff == "NA NA")
+
+ft <- goc.table(tab, paste0(nrow(tab), " Goals with no Staff Member Assigned"))
+ft
+
+tab <- goals %>%
+  filter(Member == "NA NA")
+
+ft <- goc.table(tab, paste0(nrow(tab), " Goals with no Member Assigned"))
+ft
+
+tab <- goals %>%
+  filter(is.na(Goal))
+
+ft <- goc.table(tab, paste0(nrow(tab), " Goals with no text"))
+ft
+
+tab <- goals %>%
+  group_by(Staff) %>%
+  tally()
+
+ft <- goc.table(tab, paste0(nrow(goals), " Lapsed Goals -- over 1 year since creation -- by Staff Member"))
+ft
+
+nrow(goals)
+ft <- goc.table(goals, paste0(nrow(goals), " Lapsed Goals -- over 1 year since creation"))
+ft
+```

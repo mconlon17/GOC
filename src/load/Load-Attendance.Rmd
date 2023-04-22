@@ -1,0 +1,152 @@
+---
+title: "ETL Attendance"
+header-includes:
+- \usepackage{pdflscape}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
+output:
+  html_document: default
+  word_document: 
+    reference_docx: word-styles.docx
+    keep_md: yes
+  pdf_document: default
+---
+
+```{r setup,echo=F,message=F,warning=F}
+knitr::opts_chunk$set(echo=FALSE, message=FALSE,warning=FALSE,fig.width=14)
+load("~/Documents/GOC/.RData")
+library(knitr)
+library(rmarkdown)
+library(tidyverse)
+library(kableExtra)
+library(lubridate)
+library(stringr)
+library(RMySQL)
+library(uuid)
+library(flextable)
+set_flextable_defaults(font.size = 10, theme_fun = theme_zebra,padding = 6,background.color = "#EFEFEF")
+```
+# Extract Attendance from Applistic
+
+Read the Applistic export CSV and create an R object
+
+```{r extract_attendance}
+attendance <- read_csv("../data/applistic-final/attendance.csv") %>% 
+    select(PersonID,AttendanceDate,AttendanceInTime,AttendanceOutTime) %>%
+    mutate(AttendanceDate=mdy(AttendanceDate)) %>% filter(PersonID!=0) %>%
+    mutate(PersonID=as.character(PersonID)) %>%
+    mutate(Year=year(AttendanceDate),YearMonth=ymd(paste0(Year,"-",month(AttendanceDate),"-01")))
+
+# Fix the staff numbers.  Staff were renumbered during the contact load.  To match, records must refer to new IDs.
+# The renumbering also address duplicate records
+
+staff <-data.frame(StaffName=c("Brett","Maggie","Kyanna","Nakeshia","Cristina","Sandy","Brett","Maggie","Rose Ann","Robert",
+                               "Kaitlyn","Mia","Kaitlyn","Paul","Deidra","Cristina","Kalya","Ouida","Roscoe","Jeff",
+                               "Debbie","Brian","Jill","Fey","Chris","Luis","Kerry","Joseph","Robert","Barry"),
+                  OldID=c("1469","1540","1633","1715","1729","1733","1822","1874","1964","1968",
+                          "2026","2072","2074","2100","2076","1655","1997","1698","1425","664",
+                          "1269","674","1326","1126","1154","1329","1408","312","625","649"),
+                  NewID=c("3835","4038","1633","1715","3796","1733","3835","4038","1964","4039",
+                          "4651","4553","4651","2100","4641","3796","3212","3907","3410","4336",
+                          "4200","4025","3185","3998","4206","3603","3508","3837","3958","4130"))
+
+attendance <- attendance %>%
+    left_join(staff,by=c("PersonID"="OldID")) %>%
+    mutate(PersonID = ifelse(!is.na(NewID),NewID,PersonID))
+
+attendance
+```
+
+```{r contacts}
+# Get the contacts from Flourish
+con <- dbConnect(RMySQL::MySQL(),
+                       dbname = "gainesvillecrm",
+                       host = "3.136.184.221",
+                       port = 3306,
+                       user = "mikeconlon",
+                       password = "c8g8*uKkm4s4NM")
+
+contacts <- dbGetQuery(con, "SELECT * FROM sa_contacts_2") %>%
+    rename(contact_2_id=id) %>%
+    select(contact_2_id,contact2_applistic_number,contact2_full_name)
+
+# ft <- goc.table(contacts,"all contacts")
+# ft
+
+dbDisconnect(con)
+```
+```{r join-contacts}
+attendance <- attendance %>%
+    left_join(contacts,by=c("PersonID"="contact2_applistic_number"))
+# tab <- attendance %>%
+#     group_by(PersonID,contact2_full_name) %>%
+#     tally() %>%
+#     arrange(desc(n))
+# ft<-goc.table(tab,"Attendance by identifiers")
+# ft
+```
+
+# Transform to Flourish Format
+
+Create all the columns needed for the Flourish Attendance table.
+
+*Note: Loaded after contacts and related to contact via UUID.  Matched on Applistic PersonID*
+```{r transform_attendance}
+transformed.attendance <- attendance %>%
+  
+    mutate(id = UUIDgenerate(n=n())) %>%
+    mutate(name = paste0("ATT-",seq(1,n()))) %>%
+    mutate(date_entered = Sys.time()) %>%
+    mutate(date_modified = Sys.time()) %>%
+    mutate(modified_user_id = "4cde6014-5735-b6a8-2975-63e1844134be") %>% # UUID for Mike Conlon
+    mutate(created_by = "4cde6014-5735-b6a8-2975-63e1844134be") %>%
+    mutate(description = "") %>%
+    mutate(deleted = 0) %>%
+    mutate(assigned_user_id = "") %>%
+  
+    mutate(da_date_of_attendance = AttendanceDate) %>%
+    mutate(da_comments = "") %>%
+    mutate(location = "GOC") %>%
+    mutate(da_reviewed = "Yes") %>%
+    mutate(da_social_event = ifelse(wday(AttendanceDate)==1 | wday(AttendanceDate)==7,"Yes","No")) %>% # Attendance on Saturday or Sunday is social
+    mutate(da_time_in = ymd_hms(paste(AttendanceDate, AttendanceInTime))) %>%
+    mutate(da_time_out = ymd_hms(paste(AttendanceDate, AttendanceOutTime))) %>%
+    mutate(da_time_in_hour = hour(AttendanceInTime)) %>%
+    mutate(da_time_out_hour = hour(AttendanceOutTime)) %>%
+    mutate(da_total_hours = (AttendanceOutTime - AttendanceInTime)/dhours(1)) %>%
+    mutate(da_autoincrement = 1:n()) %>%
+    mutate(contact_id = "") %>%
+    mutate(group_activity_id="") %>%
+    select(id,name,date_entered,date_modified,modified_user_id,created_by,description,deleted,assigned_user_id,
+           da_date_of_attendance,da_comments,location,da_reviewed,da_social_event,da_time_in,da_time_out,da_time_in_hour,
+           da_time_out_hour,da_total_hours,da_autoincrement,contact_id,group_activity_id,contact_2_id)
+
+ft <- goc.table(tail(transformed.attendance),"Attendance")
+ft
+
+write_csv(transformed.attendance,file="../output/transformed-attendance.csv")
+```
+
+# Connect to Flourish and write the attendance data to Flourish
+```{r load_attendance}
+
+# Make a database connection to Flourish
+
+con <- dbConnect(RMySQL::MySQL(),
+                       dbname = "gainesvillecrm",
+                       host = "3.136.184.221",
+                       port = 3306,
+                       user = "mikeconlon",
+                       password = "c8g8*uKkm4s4NM")
+
+# Allow Tables to be loaded from R
+
+dbSendQuery(con, "SET GLOBAL local_infile = true;")
+
+# empty the attendance table and load
+
+dbGetQuery(con,"DELETE FROM sa_flourish_daily_attendance;")
+dbWriteTable(con, value = transformed.attendance, name = 'sa_flourish_daily_attendance', append = T, row.names = F)
+
+dbDisconnect(con)
+```

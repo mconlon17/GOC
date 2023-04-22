@@ -1,0 +1,175 @@
+---
+title: Supported Employment Billing `r format(params$date,"%B, %Y")`
+output:
+  html_document:
+      css: "../styles/styles.css"
+params:
+  date: !r Sys.Date()
+---
+
+```{r setup,echo=FALSE,message=FALSE,warning=FALSE}
+source("setup.R")
+```
+Data required by LSF for monthly supplemental employment billing.  Data comes from:
+
+1. Members -- **member names, ids, benefits**
+1. Attendance -- only **members that attend in the current month** are included
+1. Supports -- **pre-employment and employment supports** are summarized
+1. Employment -- **employment records** are displayed
+1. Goals -- **employment goal updates** are summarized
+1. Contacts -- **employer name**
+
+To Do (Data)
+
+1. Clean the member employment goals -- add goals if needed, check end dates, update goals
+1. Add benefit data to member records
+1. Add employment assessment info on employment records
+1. Add employment supports as needed
+
+To do (Clubhouse)
+
+1. Establish documented processes for collecting, checking, and reporting all data needed by the supplemental employment report
+
+```{r get-data}
+start_date <- floor_date(params$date, "month")
+end_date <- ceiling_date(params$date, "month") - days(1)
+
+ndays <- as.integer(as_date(Sys.Date())-as_date(start_date)) +1
+
+members <- get.members() %>%
+  mutate(Benefits = ifelse(flo_ssi == "yes" | flo_ssdi == "yes" |
+    flo_food_stamps == "yes" | flo_housing_voucher == "yes", "Yes", "No")) %>%
+  select(id, contact_flourish_number, contact_id_c, last_name, first_name, Benefits)
+
+# ft <- goc.table(members)
+# ft
+
+  attendance <- get.attendance(days=ndays) %>%
+    filter(as_date(da_date_of_attendance) %within% (start_date %--% end_date)) %>%
+    mutate(da_date_of_attendance = as_date(da_date_of_attendance)) %>%
+    select(contact_2_id, da_date_of_attendance)
+
+members <- members %>%
+  inner_join(attendance, by = c("contact_id_c" = "contact_2_id")) %>%
+  group_by(id, contact_flourish_number, contact_id_c, last_name, first_name, Benefits) %>%
+  summarise(LastVisit = max(da_date_of_attendance)) %>%
+  ungroup() %>%
+  arrange(last_name, first_name)
+
+# ft <- goc.table(members, paste0(nrow(members), " Attending Members"))
+# ft
+
+supports <- get.supports() %>%
+  filter(as_date(flo_support_date) %within% (start_date %--% end_date)) %>%
+  filter(flo_support_type == "Employment_readiness" |
+    flo_support_type == "Employment_TE" |
+    flo_support_type == "Employment_IE" |
+    flo_support_type == "Employment_SE") %>%
+  mutate(Pre = ifelse(flo_support_type == "Employment_readiness", "Yes", "No")) %>%
+  mutate(SES = ifelse(flo_support_type != "Employment_readiness", "Yes", "No")) %>%
+  select(id, sa_contacts_2_id, Pre, SES, flo_support_date)
+
+support.rel <- get.table("flo_supports_contacts_c") %>%
+  select("flo_supports_contactsflo_supports_ida", "flo_supports_contactscontacts_idb")
+
+# support id is flo_supports_contactsflo_supports_ida
+# member id is flo_supports_contactscontacts_idb
+
+
+members <- members %>%
+  left_join(support.rel, by = c("id" = "flo_supports_contactscontacts_idb")) %>%
+  left_join(supports, by = c("flo_supports_contactsflo_supports_ida" = "id")) %>%
+  select(-flo_supports_contactsflo_supports_ida) %>%
+  group_by(id, contact_flourish_number, contact_id_c, last_name, first_name, LastVisit, Benefits) %>%
+  summarise(Pre = max(Pre, na.rm = T), SES = max(SES, na.rm = T), MostRecentSupport = max(flo_support_date, na.rm=T)) %>%
+  ungroup() %>%
+  mutate(Pre = ifelse(Pre == -Inf | is.na(Pre), "No", Pre)) %>%
+  mutate(SES = ifelse(SES == -Inf | is.na(SES), "No", SES))
+
+goals <- get.goals()[,c("contact_id", "flo_goal_type", "flo_goal_end_date", "date_modified")] %>%
+  filter(flo_goal_type == "Employment") %>%
+  filter(!is.na(flo_goal_end_date) & as_date(flo_goal_end_date) <= end_date) %>%
+  filter(!is.na(date_modified) & as_date(date_modified) <= end_date) 
+  
+members <- members %>%
+  left_join(goals, by = c("id"="contact_id")) %>%
+  group_by(id, contact_flourish_number, contact_id_c, last_name, first_name, LastVisit, Benefits, Pre, SES, MostRecentSupport) %>%
+  summarise(DischargeDate = max(as_date(flo_goal_end_date), na.rm=T),
+            EmploymentPlanUpdate = max(date_modified, na.rm=T)) %>%
+  mutate(DischargeDate = as_date(ifelse(DischargeDate == -Inf, NA, DischargeDate)),
+         EmploymentPlanUpdate = as_date(ifelse(EmploymentPlanUpdate == -Inf, NA, EmploymentPlanUpdate)))
+
+# ft <- goc.table(members, paste0(nrow(members), " Add goal info ", format(params$date,"%B, %Y")))
+# ft
+
+assess <- get.employment()[,c("contact_id", "emp_assessment_date")] %>%
+  group_by(contact_id) %>%
+  summarise(RecentAssess = max(emp_assessment_date, na.rm=T)) %>%
+  ungroup()
+
+members <- members %>%
+  left_join(assess, by=c("id" = "contact_id"))
+
+# Employment records
+
+members <- members %>%
+  left_join(get.employment()[, c(
+    "contact_id", "flo_emp_date_start",
+    "flo_emp_job_title",
+    "flo_emp_date_end", "flo_emp_job_title",
+    "flo_emp_approximate_hourly_pay",
+    "flo_emp_approximate_hours_wk",
+    "employer_id"
+  )], by = c("id" = "contact_id")) %>%
+  left_join(get.contacts()[, c("id", "contact2_full_name")], by = c("employer_id" = "id"))
+
+# ft <- goc.table(members, paste0(nrow(members), " Attending Members in ", format(params$date, "%B, %Y")))
+# ft
+
+# Finalize presentation
+
+members <- members %>%
+  arrange(last_name, first_name) %>%
+  ungroup() %>%
+  rename(`Client's Last Name` = last_name, 
+         `Client's First Name` = first_name,
+         `Client ID` = contact_flourish_number,
+         `Most Recent Clubhouse Attendance Date` = LastVisit, 
+         `Did this Client Receive Pre-Employment Supports this Month? (Yes/No)` = Pre, 
+         `Is This Client Receiving Benefits?` = Benefits,
+         `Did This Client Receive Supported Employment Services this Month? (Yes/No)` = SES,
+         `Most Recent Supported Employment Service Date` = MostRecentSupport, 
+         `Start Date of Most Recent Job` = flo_emp_date_start,
+         `End Date of Most Recent Job` = flo_emp_date_end,
+         `Supported Employment Initial Assessment Completion Date` = RecentAssess,
+         `Employer Name` = contact2_full_name,
+         `Supported Employment Initial Service Plan Creation Date` = EmploymentPlanUpdate,
+         `Supported Employment Discharge Date` = DischargeDate,
+         `Job Title` = flo_emp_job_title,
+         `Average # Hours Worked Per Week` = flo_emp_approximate_hours_wk,
+         `Hourly Pay` = flo_emp_approximate_hourly_pay,
+         ) %>%
+  select(`Client's Last Name`, 
+         `Client's First Name`, 
+         `Client ID`, 
+         `Most Recent Clubhouse Attendance Date`, 
+         `Did this Client Receive Pre-Employment Supports this Month? (Yes/No)`, 
+         `Is This Client Receiving Benefits?`,
+         `Did This Client Receive Supported Employment Services this Month? (Yes/No)`,
+         `Supported Employment Initial Assessment Completion Date`,
+         `Supported Employment Initial Service Plan Creation Date`,
+         `Most Recent Supported Employment Service Date`,
+         `Supported Employment Discharge Date`,
+         `Start Date of Most Recent Job`,
+         `End Date of Most Recent Job`,
+         `Employer Name`,
+         `Job Title`,
+         `Average # Hours Worked Per Week`,
+         `Hourly Pay`,
+         -id,
+         -contact_id_c
+         )
+
+ft <- goc.table(members, paste0(nrow(members), " Attending Members in ", format(params$date, "%B, %Y")))
+ft
+```

@@ -1,0 +1,31 @@
+---
+title: Gifts by Campaign
+output:
+    html_document:
+        css: "../styles/styles.css"
+---
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+```{r gifts}
+
+gifts <- get.gifts() %>%
+    filter(!deleted) %>%
+    mutate(Year=year(as_date(flo_gift_date)))
+
+# nrow(gifts)
+
+# ft <- goc.table(tail(gifts),"Gifts")
+# ft
+
+tab <- gifts %>%
+  mutate(Count=1) %>%
+  group_by(flo_gift_campaign) %>%
+  summarise(`Number Of Donations`=sum(Count),
+            `Number of Donors`=n_distinct(contact_2_id),Total=sum(flo_gift_amount)) %>%
+  arrange(desc(flo_gift_campaign)) %>%
+  rename(Campaign = flo_gift_campaign)
+
+ft <- goc.table(tab,"Gifts by Campaign") %>% colformat_num(j="Total",big.mark=",", prefix="$")
+ft
+```

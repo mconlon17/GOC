@@ -1,0 +1,52 @@
+---
+title: Members by City and County
+output:
+    html_document:
+        css: "../styles/styles.css"
+---
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+## Members by City
+```{r members-by-city}
+
+cities <-c("Alachua","Archer","Bell","Casselberry","Cross Creek","Earleton","Fort_McCoy","Fort_White","Gainesville",
+"Hawthorne","High Springs","Inglis","Interlachen","Keystone Heights","Lake Butler","Lake_City",
+"Melrose","Micanopy","Newberry","Ocala","Palatka","Palm Harbor","Plantation","Silver Springs","Starke","Trenton",
+"Unknown","Waldo","Williston")
+counties<-c("Alachua","Alachua","Gilchrist","Seminole", "Alachua", "Alachua", "Marion", "Columbia", "Alachua",
+"Alachua", "Alachua", "Levy", "Putnam", "Clay", "Union", "Columbia",
+"Clay", "Alachua", "Alachua", "Marion", "Putnam", "Pinellas", "Broward", "Marion", "Bradford", "Gilchrist",
+"Unknown", "Alachua", "Levy")
+
+data.cities.and.counties <- data.frame(city=cities, county=counties)
+
+# data.cities.and.counties
+
+
+# members <- get.members() %>%
+#     filter(startsWith(primary_address_city, "Lake"))  %>%
+#     select(first_name, last_name, primary_address_city)
+# 
+# ft <- goc.table(members)
+# ft
+
+members <- get.members() %>%
+    group_by(primary_address_city) %>%
+    tally() %>%
+    full_join(data.cities.and.counties, by=c("primary_address_city"="city"))
+
+ft <- goc.table(members, "Members By City")
+ft
+```
+## Members by County
+```{r by-county}
+members <-members %>%
+    group_by(county) %>%
+    tally(n)
+
+ft <- goc.table(members, "Members By County")
+ft
+```
+
+```

@@ -1,0 +1,37 @@
+---
+title: All Member Outreach  for `r Sys.Date()`
+output:
+  html_document:
+      css: "../styles/styles.css"
+---
+```{r setup,echo=FALSE,message=FALSE}
+source("setup.R")
+```
+```{r members}
+contacts <- get.contacts() %>%
+  filter(grepl("Member", c2_groups)) %>%
+  filter(!grepl("Deceased", c2_groups)) %>%
+  mutate(Name = paste(last_name, first_name, sep = ", ")) %>%
+  select(id, Name, phone_home, email_address)
+
+members <- get.members() %>%
+  select(contact_id_c, flo_primary_phone)
+
+member.attendance <- get.attendance() %>%
+  inner_join(contacts, by = c("contact_2_id" = "id")) %>% # Inner join must be a Member with attendance
+  select(Name, contact_2_id, da_date_of_attendance, email_address) %>%
+  filter(!is.na(Name))
+
+out <- member.attendance %>%
+  mutate(Since = Sys.Date() - as_date(da_date_of_attendance)) %>%
+  group_by(contact_2_id, Name) %>%
+  summarise(MostRecent = min(Since), email_address = min(email_address)) %>%
+  ungroup() %>%
+  left_join(members, by = c("contact_2_id" = "contact_id_c")) %>%
+  arrange(MostRecent, Name) %>%
+  rename(Phone = flo_primary_phone, `Most Recent` = MostRecent, `Email` = email_address) %>%
+  select(Name, `Most Recent`, Phone, `Email`)
+
+ft <- goc.table(out, paste("All Member Outreach for", Sys.Date()))
+ft
+```

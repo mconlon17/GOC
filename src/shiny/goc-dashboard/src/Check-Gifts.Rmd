@@ -1,0 +1,80 @@
+---
+title: Check Gifts
+output:
+    html_document:
+        css: "../styles/styles.css"
+params:
+  date: !r Sys.Date()
+---
+```{r setup,echo=FALSE,message=FALSE,warning=FALSE}
+source("setup.R")
+```
+
+```{r check-gifts}
+gifts <- get.gifts()
+
+tab <- gifts %>%
+  filter(is.na(contact_2_id)) %>%
+  select(name, flo_gift_date, flo_gift_amount, flo_gift_payment_method, flo_gift_campaign)
+
+ft <- goc.table(tab, paste0(nrow(tab)," Gifts with no donor"))
+ft
+
+tab <- gifts %>%
+  group_by(flo_anonymous_gift) %>%
+  tally()
+
+ft <- goc.table(tab)
+ft
+
+tab <- gifts %>%
+  group_by(flo_gift_amount) %>%
+  tally()
+
+ft <- goc.table(tab)
+ft
+
+tab <- gifts %>%
+  group_by(flo_gift_campaign) %>%
+  tally()
+
+ft <- goc.table(tab)
+ft
+
+tab <- gifts %>%
+  mutate(Year = year(as_date(flo_gift_date))) %>%
+  group_by(Year) %>%
+  tally()
+
+ft <- goc.table(tab)
+ft
+
+tab <- gifts %>%
+  group_by(flo_gift_payment_method) %>%
+  tally()
+
+ft <- goc.table(tab)
+ft
+
+tab <- gifts %>%
+  group_by(flo_restricted_gift) %>%
+  tally()
+
+ft <- goc.table(tab)
+ft
+
+tab <- gifts %>%
+  group_by(flo_thank_you_date) %>%
+  tally()
+
+ft <- goc.table(tab)
+ft
+
+tab <- gifts %>%
+  filter(!is.na(GOC_restriction_letter) & GOC_restriction_letter != "" & GOC_restriction_letter != "http://") %>%
+  select(name, flo_gift_date, flo_gift_amount, flo_gift_payment_method, flo_gift_campaign, GOC_restriction_letter)
+
+ft <- goc.table(tab, paste0(nrow(tab)," Gifts with restriction letters"))
+ft
+
+```

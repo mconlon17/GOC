@@ -1,0 +1,36 @@
+---
+title: Attendance Checklist for `r params$date`
+output:
+  html_document:
+      css: "../styles/styles.css"
+params:
+  date: !r Sys.Date()-2
+---
+```{r setup,echo=FALSE,message=FALSE}
+source("setup.R")
+```
+```{r attendance}
+contacts <- get.contacts()
+
+ndays <- as.integer(as_date(Sys.Date())-as_date(params$date)) +1
+
+tab <- get.attendance(days = ndays) %>%
+  filter(da_date_of_attendance == params$date) %>%
+  left_join(contacts, by = c("contact_2_id" = "id")) %>%
+  mutate(Name = paste(last_name, first_name, sep = ", ")) %>%
+  select(Name, da_time_in, da_time_out) %>%
+  mutate(`Time In` = format(as.POSIXct(da_time_in), "%I:%M %p")) %>%
+  mutate(`Time Out` = format(as.POSIXct(da_time_out), "%I:%M %p")) %>%
+  mutate(Hours = format(round(as.numeric(difftime(da_time_out, da_time_in, unit = "hours")), 2), nsmall = 2)) %>%
+  select(Name, `Time In`, `Time Out`, Hours) %>%
+  full_join(data.frame(Name = c(
+    "Buell, Brett", "Leblanc, Paul",
+    "Ellis, Robert", "Roberts, Kaitlyn", "Quiroga, Cristina",
+    "Chisolm, Mia", "Simon, Deidra"
+  ))) %>%
+  arrange(Name)
+
+
+ft <- goc.table(tab, paste("Checklist for", params$date))
+ft
+```

@@ -1,0 +1,26 @@
+---
+title: "Recent Members `r params$date`"
+
+output:
+  html_document:
+      css: "../styles/styles.css"
+params:
+  date: !r Sys.Date()
+  days: 10
+---
+```{r setup,echo=FALSE,message=F,warning=F}
+source("setup.R")
+```
+
+```{r members}
+members <- get.members()
+
+tab <- members %>%
+    filter(params$date - as_date(date_entered) <= params$days) %>%
+    select(first_name, last_name, date_entered) %>%
+    arrange(desc(date_entered)) %>%
+    rename(`First Name`=first_name, `Last Name`=last_name, `Date Entered`=date_entered)
+
+ft <- goc.table(tab, paste0("New members since ",params$date-days(params$days)))
+ft
+```

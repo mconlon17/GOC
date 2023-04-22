@@ -1,0 +1,55 @@
+---
+title: "Supports by Member"
+output:
+  html_document:
+    css : "../styles/styles.css"
+---
+
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+Rewrite after supports are linked to members
+```{r supports}
+# Create one row for each support-member combination
+
+supports <- get.supports() %>%
+  mutate(MemberCount = str_count(Members, "!") + 1, Support = row_number()) %>%
+  uncount(MemberCount) %>%
+  group_by(Support) %>%
+  mutate(MemberIndex = row_number()) %>%
+  mutate(Member = word(Members, MemberIndex, MemberIndex, sep = "!")) %>%
+  ungroup() %>%
+  select(StaffName, Date, Duration, Type, Member, SupportNote)
+
+ft <- goc.table(supports)
+ft
+
+tab <- supports %>%
+  mutate(StaffName = word(StaffName)) %>%
+  count(Type, StaffName) %>%
+  group_by(Type) %>%
+  spread(StaffName, n)
+
+ft <- goc.table(tab)
+
+day <- floor_date(now() - days(1), unit = "days")
+dat <- supports %>% filter(Date == day)
+ggplot(dat, aes(Type, fill = Type)) +
+  ggtitle(paste("Member Supports by Type for", format(day, "%B %d, %Y"), collapse = " ")) +
+  ylab("Count") +
+  xlab("Support Type") +
+  geom_bar() +
+  theme(plot.title = element_text(size = 22), legend.position = "none")
+ggplot(dat, aes(Type)) +
+  ggtitle(paste("Member Supports by Type and Staff", format(day, "%B %d, %Y"), collapse = " ")) +
+  ylab("") +
+  xlab("Support Type") +
+  geom_bar(aes(fill = StaffName)) +
+  theme(plot.title = element_text(size = 22))
+ggplot(dat, aes(Type)) +
+  ggtitle(paste("Member Supports by Type and Member", format(day, "%B %d, %Y"), collapse = " ")) +
+  ylab("") +
+  xlab("Support Type") +
+  geom_bar(aes(fill = Member)) +
+  theme(plot.title = element_text(size = 22))
+```

@@ -1,0 +1,55 @@
+---
+title: Gifts by Campaign
+output:
+    html_document:
+        css: "../styles/styles.css"
+---
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+```{r gifts}
+
+gifts <- get.gifts() %>%
+    mutate(Year=year(as_date(flo_gift_date))) %>%
+    filter(!(flo_gift_campaign %in% c("2022_satch_squared_rufc", "2022_carwash", "2021_carwash", "2021_belk")))
+
+tab <- gifts %>%
+  mutate(Count=1) %>%
+  group_by(flo_gift_campaign) %>%
+  summarise(`Number Of Donations`=sum(Count),
+            `Number of Donors`=n_distinct(contact_2_id),Total=sum(flo_gift_amount)) %>%
+  arrange(desc(flo_gift_campaign)) %>%
+  rename(Campaign = flo_gift_campaign)
+```
+
+```{r donor-plots}
+ggplot(tab, aes(`Number Of Donations`,Total, 
+                             label=Campaign)) + geom_text() + 
+    ggtitle("Total Raised vs Number of Donations for each Campaign") +
+    ylab("Total Dollars Raised") + 
+    xlab("Number of Donations")
+ 
+ggplot(gifts, aes(x=reorder(flo_gift_payment_method, 
+                            flo_gift_amount, function(x) sum(x)))) +
+    geom_bar(aes(weight=flo_gift_amount), fill="red") + 
+    ggtitle("Total Raised by Payment Method") +
+    ylab("Total Dollars Raised") + 
+    xlab("Payment Method")
+
+dat <- tab
+dat$fraction = dat$`Number Of Donations` / sum(dat$`Number Of Donations`)
+dat = dat[order(dat$fraction), ]
+dat$ymax = cumsum(dat$fraction)
+dat$ymin = c(0, head(dat$ymax, n=-1))
+ggplot(dat, aes(ymax=ymax, ymin=ymin, xmax=4, xmin=3, fill = Campaign)) +
+  geom_rect(colour="grey30") +
+  coord_polar(theta = "y") +
+  theme_bw() +
+  xlim(c(0,4)) +
+  theme(axis.ticks=element_blank()) +
+  theme(axis.text=element_blank()) +
+  theme(panel.grid=element_blank()) +
+  ggtitle("Donations per Campaign") + xlab("") + ylab("")
+         
+```
+

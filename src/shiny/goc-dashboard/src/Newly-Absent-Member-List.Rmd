@@ -1,0 +1,40 @@
+---
+title: Newly Absent Member List
+output:
+    html_document:
+        css: "../styles/styles.css"
+params:
+  date: !r Sys.Date()
+---
+```{r setup,echo=FALSE,message=FALSE,warning=FALSE}
+source("setup.R")
+```
+
+```{r get-data}
+
+contacts <- get.contacts() %>%
+    filter(grepl("Member",c2_groups)) %>%
+    filter(!grepl("Deceased",c2_groups)) %>%
+    mutate(Name=paste(last_name,first_name,sep=", ")) %>%
+    select(Name,id)
+
+suppressWarnings({
+    
+attendance <- get.attendance()
+
+})
+
+member.attendance <- attendance %>%
+    inner_join(contacts,by=c("contact_2_id"="id"))
+
+tab <- member.attendance %>%
+  mutate(Since = params$date - as_date(da_date_of_attendance)) %>%
+  group_by(Name) %>%
+  summarise(`Last Visit` = min(Since)) %>%
+  filter(`Last Visit` > 90) %>%
+  arrange(`Last Visit`) %>%
+  select(Name, `Last Visit`)
+
+ft <- goc.table(tab,paste0("Absent over 90 days as of ",params$date))
+ft
+```

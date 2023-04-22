@@ -1,0 +1,150 @@
+---
+title: "Load Member Demographics"
+output:
+  html_document:
+    css: "../../styles/styles.css"
+---
+
+```{r setup,echo=F,message=F,warning=F}
+source("../setup.R")
+```
+
+```{r flourish}
+# Get Members
+
+members <- get.members(include.deleted = T) %>%
+  select(id,flo_external_id1_c, first_name, last_name, flo_race_c, flo_ethnicity_hispanic_c)
+
+# nrow(members) 
+# 
+# ft <- goc.table(members)
+# ft
+
+# Veteran (no info in Applistic)
+# Marital
+# Gender at birth
+# Gender today (same as gender at birth)
+# Pronouns (same as gender at birth)
+# Hispanic
+
+# Get applistic info
+
+demographics <- read_csv("../../data/applistic-final/people.csv", col_types = list(
+  Race3 = "c", ProviderTitle = "c", ProviderSuffix = "c",
+  Referral = "c", Race8 = "c", Race9 = "c", Race12 = "c", Race13 = "c",
+  Race14 = "c", StaffIDNumber = "c"
+)) %>%
+  mutate(PersonID = as.character(PersonID)) %>%
+    select(PersonID, MaritalStatus, Gender, Ethnicity, Race1, Race2, Race3, Race4, Race5, Race6, Race7, 
+           Race8, Race9, Race10, Race11, Race12, Race13,
+           Race14, Race15, Race16)
+
+tab <- demographics %>%
+    group_by(MaritalStatus) %>%
+    tally()
+
+ft <- goc.table(tab)
+ft
+
+demographics <- members %>%
+  inner_join(demographics, by=c("flo_external_id1_c"="PersonID")) %>%
+    rowwise() %>%
+    
+    # Race
+
+    mutate(flo_race_mult = paste(Race1,Race2,Race3,Race4,Race5,Race6,Race7,Race8,
+                              Race9,Race10,Race11,Race12,Race13,Race14,Race15,sep=",",collapse=",")) %>%
+    mutate(flo_race_mult = gsub("NA,","",flo_race_mult)) %>%
+    mutate(flo_race_mult = gsub(",NA","",flo_race_mult)) %>%
+    filter(flo_race_mult != "NA") %>%
+    mutate(flo_race_mult = str_replace(flo_race_mult,"Caucasian or White","^white^")) %>%
+    mutate(flo_race_mult = str_replace(flo_race_mult,"Black or African American","^black^")) %>%
+    mutate(flo_race_mult = str_replace(flo_race_mult,"Amer. Indian or Alaska Native","^native_american^")) %>%
+    mutate(flo_race_mult = str_replace(flo_race_mult,"Pacific Islander","^pacific_islander^")) %>%
+    mutate(flo_race_mult = ifelse(startsWith(flo_race_mult,"A"),"^asian^",flo_race_mult)) %>%
+    
+    # Marital Status
+    
+    mutate(flo_marital_status_c = "") %>%
+    mutate(flo_marital_status_c = ifelse(MaritalStatus == "Divorced","divorced",flo_marital_status_c)) %>%
+    mutate(flo_marital_status_c = ifelse(MaritalStatus == "Legally Separated","legally_separated",flo_marital_status_c)) %>%
+    mutate(flo_marital_status_c = ifelse(MaritalStatus == "Divorced","divorced",flo_marital_status_c)) %>%
+    mutate(flo_marital_status_c = ifelse(MaritalStatus == "Married","married",flo_marital_status_c)) %>%
+    mutate(flo_marital_status_c = ifelse(MaritalStatus == "Separated","separated",flo_marital_status_c)) %>%
+    mutate(flo_marital_status_c = ifelse(MaritalStatus == "Single","single",flo_marital_status_c)) %>%
+    mutate(flo_marital_status_c = ifelse(MaritalStatus == "Widowed","widowed",flo_marital_status_c)) %>%
+    
+    # Gender at birth
+    
+    mutate(flo_gender_at_birth_c = "") %>%
+    mutate(flo_gender_at_birth_c = ifelse(Gender == "Male","male",flo_gender_at_birth_c)) %>%
+    mutate(flo_gender_at_birth_c = ifelse(Gender == "Female","female",flo_gender_at_birth_c)) %>%
+    
+    # Gender identity
+    
+    mutate(flo_gender_identity_c = "") %>%
+    mutate(flo_gender_identity_c = ifelse(Gender == "Male","male",flo_gender_identity_c)) %>%
+    mutate(flo_gender_identity_c = ifelse(Gender == "Female","female",flo_gender_identity_c)) %>%
+    
+    # Pronouns
+    
+    mutate(flo_preferred_pronouns_c = "") %>%
+    mutate(flo_preferred_pronouns_c = ifelse(Gender == "Male","he_him",flo_preferred_pronouns_c)) %>%
+    mutate(flo_preferred_pronouns_c = ifelse(Gender == "Female","she_her",flo_preferred_pronouns_c)) %>%
+    
+    # Hispanic
+    
+    mutate(flo_ethnicity_hispanic_c = "") %>%
+    mutate(flo_ethnicity_hispanic_c = ifelse(startsWith(Ethnicity,"Yes"),"hispanic",flo_ethnicity_hispanic_c)) %>%
+    mutate(flo_ethnicity_hispanic_c = ifelse(startsWith(Ethnicity,"No"),"not_hispanic",flo_ethnicity_hispanic_c)) %>%
+    
+    # Required columns
+    
+    mutate(date_modified = now()) %>%
+    mutate(modified_user_id = "4cde6014-5735-b6a8-2975-63e1844134be") %>%
+    
+    select(id,flo_race_mult, flo_marital_status_c, flo_gender_at_birth_c, 
+           flo_gender_identity_c, flo_preferred_pronouns_c, flo_ethnicity_hispanic_c, date_modified, modified_user_id)
+
+nrow(demographics)
+
+ft <- goc.table(demographics, paste("Demographics", today()))
+ft
+```
+
+```{r do-update}
+# Make a database connection to Flourish
+
+con <- dbConnect(RMySQL::MySQL(),
+                       dbname = "gainesvillecrm",
+                       host = "3.136.184.221",
+                       port = 3306,
+                       user = "mikeconlon",
+                       password = "c8g8*uKkm4s4NM")
+
+# Allow Tables to be loaded from R
+
+dbSendQuery(con, "SET GLOBAL local_infile = true;")
+
+# Create temporary table
+
+dbSendQuery(con, 'DROP TABLE temp_members_update;')
+dbWriteTable(con, value = demographics, name = 'temp_members_update', append = F, row.names = F)
+
+dbSendQuery(con, 'UPDATE contacts
+                     INNER JOIN temp_members_update ON
+                         contacts.id = temp_members_update.id
+                     SET contacts.date_modified = temp_members_update.date_modified,
+                         contacts.modified_user_id = temp_members_update.modified_user_id,
+                         
+                        contacts.flo_race_mult             = temp_members_update.flo_race_mult,
+                        contacts.flo_marital_status_c      = temp_members_update.flo_marital_status_c,
+                        contacts.flo_gender_at_birth_c     = temp_members_update.flo_gender_at_birth_c,
+                        contacts.flo_gender_identity_c     = temp_members_update.flo_gender_identity_c,
+                        contacts.flo_preferred_pronouns_c  = temp_members_update.flo_preferred_pronouns_c,
+                        contacts.flo_ethnicity_hispanic_c  = temp_members_update.flo_ethnicity_hispanic_c
+                 ;')
+
+dbSendQuery(con, 'DROP TABLE temp_members_update;')
+dbDisconnect(con)
+```

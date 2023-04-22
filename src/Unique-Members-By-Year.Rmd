@@ -1,0 +1,23 @@
+---
+title: Unique Members By Year
+output:
+    html_document:
+        css: "../styles/styles.css"
+---
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+For each calendar year since the founding of the GOC, count the number of unique Members seen that year, irregardless of how many times the member visited during the calendar year.
+```{r members}
+attendance <- get.attendance() %>%
+    mutate(Year = year(da_date_of_attendance)) %>%
+    left_join(get.contacts(), by=c("contact_2_id"="id")) %>%
+    filter(grepl("Member", c2_groups)) %>%
+    group_by(Year, contact_2_id) %>%
+    tally() %>%
+    group_by(Year) %>%
+    tally()
+
+ft <- goc.table(attendance, "Unique Members seen by year")
+ft
+```

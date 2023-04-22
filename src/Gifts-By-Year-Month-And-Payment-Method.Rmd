@@ -1,0 +1,37 @@
+---
+title: "Gifts by Year, Month, and Payment Method"
+output:
+  html_document:
+      css: "../styles/styles.css"
+---
+
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+
+```{r gifts}
+gifts <- get.gifts() %>%
+  mutate(Year=year(flo_gift_date),
+         YearMonth=ymd(paste0(Year,"-",month(flo_gift_date),"-01")))
+
+tab <- gifts %>% 
+    group_by(Year,flo_gift_payment_method) %>%
+    tally() %>%
+    group_by(Year) %>%
+    spread(flo_gift_payment_method,n) %>%
+    arrange(desc(Year))
+
+ft <- goc.table(tab)
+ft
+
+tab <- gifts %>% 
+    group_by(YearMonth,flo_gift_payment_method) %>%
+    tally() %>%
+    group_by(YearMonth) %>%
+    spread(flo_gift_payment_method,n) %>%
+    arrange(desc(YearMonth))
+
+ft <- goc.table(tab)
+ft
+```
+
