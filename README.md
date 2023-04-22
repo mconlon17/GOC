@@ -34,7 +34,7 @@ The GOC plans to implement
 * Daily Attendance Lists -- Member, Staff/Volunteer, and Visitor sign-up sheets
 * Newly Absent Member List -- lists Members who have not attended for more than 90 days
 * Outreach List -- lists Members with date of last attendace for use in Outreach
-* *Record tracking -- for each module, show new records added and records updated. For process monitoring*
+* Record tracking -- for each module, show new records added and records updated. For process monitoring
 
 ### Weekly
 
@@ -70,11 +70,14 @@ The GOC plans to implement
 ## To Do (software only)
 
 1. Synch Members and Contacts
-1. Implement R Server batch jobs on Flourish Community instance to speed up the dashboard:
-    1. Precalculate common data requests -- active members, staff
+1. Implement R Server batch jobs on Flourish Community instance to speed up the dashboard by precalculating common data requests -- active members, staff
 1. Implement keychain on R Server
+1. Move dashboard from commercial hosting to Form Communities hosting
 1. Implement data caching in dashboard to improve response time
-1. Move dashboard from commercial hostying to Form Communities hosting
+1. Implement goctools library to provide access to required code for both local and dashboard use
+1. Improve code organization and consistency
+    1. Remove dependency on .RData, all code should be in goctools
+    1. Improve older reports to use current coding paradigms
 1. Add reports as need for operational use at the GOC.  Some anticipated reports are:
     1. ARPA billing report -- when requirements are developed
     1. Wellness billing report -- when event attendance is implemented
