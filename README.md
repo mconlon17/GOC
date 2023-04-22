@@ -69,9 +69,11 @@ The GOC plans to implement
 
 ## To Do (software only)
 
-1. Synch Members and Contacts
-1. Implement R Server batch jobs on Flourish Community instance to speed up the dashboard by precalculating common data requests -- active members, staff
-1. Implement keychain on R Server
+
+1. Implement R Server batch jobs on Flourish Community instance
+    1. Implement keychain on R Server
+    1. Synch Members and Contacts
+    1. Btach jobs to pre-calc common data requests, such as 90 day attendance, active members, current staff
 1. Move dashboard from commercial hosting to Form Communities hosting
 1. Implement data caching in dashboard to improve response time
 1. Implement goctools library to provide access to required code for both local and dashboard use
