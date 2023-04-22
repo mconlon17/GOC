@@ -25,7 +25,7 @@ The GOC has implemented 10 Flourish modules:
 The GOC plans to implement
 
 1. Education.  One record per "education" -- start/end with a specific education program.  Education providers in contacts.
-1. Group Event.  One record per event -- date/time/locsation/duration.  With associated members and staff.
+1. Group Events.  One record per event -- date/time/location/duration.  With associated members and staff.
 
 ## Reports
 
@@ -33,7 +33,7 @@ The GOC plans to implement
 
 * Daily Attendance Lists -- Member, Staff/Volunteer, and Visitor sign-up sheets
 * Newly Absent Member List -- lists Members who have not attended for more than 90 days
-* Outreach List -- lists Members with date of last attendace for use in Outreach
+* Outreach List -- lists Members with date of last attendance for use in Outreach
 * Record tracking -- for each module, show new records added and records updated. For process monitoring
 
 ### Weekly
@@ -44,7 +44,7 @@ The GOC plans to implement
 ### Monthly or so
 
 * Billing List -- used to produce the monthly invoice to LSF
-* *Board report -- bi-monthly report to the board*
+* Board report -- bi-monthly report to the board
 * Donations by Campaign -- shows donations to each campaign since 2017
 * Last attendance in month -- used in Supplemental Employment billing of LSF
 * Monthly attendance summary -- used by management to track attendance at work ordered day, social, and holiday events
@@ -69,7 +69,7 @@ The GOC plans to implement
 
 ## To Do (software only)
 
-
+1. Complete initial github deployment
 1. Implement R Server batch jobs on Flourish Community instance
     1. Implement keychain on R Server
     1. Synch Members and Contacts
