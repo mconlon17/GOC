@@ -23,11 +23,7 @@ tab <- get.attendance(days = ndays) %>%
   mutate(`Time Out` = format(as.POSIXct(da_time_out), "%I:%M %p")) %>%
   mutate(Hours = format(round(as.numeric(difftime(da_time_out, da_time_in, unit = "hours")), 2), nsmall = 2)) %>%
   select(Name, `Time In`, `Time Out`, Hours) %>%
-  full_join(data.frame(Name = c(
-    "Buell, Brett", "Leblanc, Paul",
-    "Ellis, Robert", "Roberts, Kaitlyn", "Quiroga, Cristina",
-    "Chisolm, Mia", "Simon, Deidra"
-  ))) %>%
+  full_join(data.frame(Name = get.staff.names())) %>%
   arrange(Name)
 
 

@@ -1,0 +1,9 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+src/*.html
+src/shiny/goc-dashboard/src/*.html
+src/*.csv
+src/shiny/goc-dashboard/src/*.csv
+

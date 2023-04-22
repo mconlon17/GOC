@@ -120,8 +120,7 @@ ui <- dashboardPage(
         menuSubItem("Last Attendance in Month", tabName = "last-attendance-in-month-list"),
         menuSubItem("Staff Time Report", tabName = "staff-time-report"),
         selectInput(
-          "staff_name", "Staff Member",
-          c("Buell, Brett", "Chisolm, Mia", "Ellis, Robert", "Leblanc, Paul", "Quiroga, Cristina", "Roberts, Kaitlyn", "Simon, Deidra", "Smith, Daniel")
+          "staff_name", "Staff Member", get.staff.names()
         )
       ),
 
@@ -200,14 +199,8 @@ ui <- dashboardPage(
           title = "Flourish News",
           background = "navy",
           width = 4,
-          p("Progress Bar added to Active Members Over Time"),
-          p("Daniel Smith added to drop down for Staff Time Report"),
-          p("Flourish Record Counts updated to show deleted, non-deleted, and total record counts"),
-          p("Active Member Outreach now sorted by Days and Name"),
-          p("Unique Members by Year added"),
-          p("271 Member addresses improved"),
-          p("Members by city and county added"),
-          p("Efficiency improvements, most reports/displays 2x+ faster")
+          p("Staff Name lists are now dynamic from Contacts"),
+          p("Progress Bar added to Active Members Over Time")
         )
       ),
 
