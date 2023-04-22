@@ -15,7 +15,7 @@ The GOC has implemented 10 Flourish modules:
 1. Attendance.  All attendnace, including staff, visitors, and volunteers.
 1. Outreach.  Outreach to Members.
 1. Employment.  One record per "employment" -- start/end with a specific employer.  Employers in Contacts.
-1. Supports.  One record per support -- a group on Members and a Staff Member participating in a clubhouse activity.
+1. Supports.  One record per support -- Members and a Staff Member participating in a clubhouse activity.
 1. Goals and Plans.  One record per goal with associated plan.  Members have multiple goals.
 1. Progress Notes.  One progress note per month per goal.
 1. Users.  The users of the sstem, including accesss roles.
