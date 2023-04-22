@@ -5,10 +5,10 @@ account: gainesvilleopportunitycenter
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 8542470
-bundleId: 7119874
+bundleId: 7122176
 url: https://gainesvilleopportunitycenter.shinyapps.io/goc-dashboard/
-when: 1682113125.87667
-lastSyncTime: 1682113125.87668
+when: 1682188084.74306
+lastSyncTime: 1682188084.74307
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: .RData 3|img/.DS_Store
+ignoredFiles: .RData 3
