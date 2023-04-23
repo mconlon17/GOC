@@ -187,8 +187,8 @@ ui <- dashboardPage(
         
         infoBox("Today", Sys.Date(), icon = icon("calendar"), color = "fuchsia", fill = TRUE),
         infoBox("Active Members", value=uiOutput("active_members"), icon = icon("users"), color = "green", fill = TRUE),
-        box(title = "Amazing Give Results 4/22", background = "navy", width = 4,
-          p("$33,671 at 2:20 pm. See",a("GOC at the Amazing Give",href="https://www.theamazinggive.org/organizations/gainesville-opportunity-center"))),
+        box(title = "Amazing Give Results 4/23", background = "navy", width = 4,
+          p("$33,996 at 2:10 pm. See",a("GOC at the Amazing Give",href="https://www.theamazinggive.org/organizations/gainesville-opportunity-center"))),
         
         box(title = "Membership Growth", status = "warning", solidHeader = TRUE, collapsible = TRUE, plotOutput("important_plot", height = 250)),
         box(title = "Gift Growth", status = "warning", solidHeader = TRUE, collapsible = TRUE, plotOutput("another_plot", height = 250)),
@@ -199,6 +199,7 @@ ui <- dashboardPage(
           title = "Flourish News",
           background = "navy",
           width = 4,
+          p("Active Members Assigned to Staff now dynamic from Members"),
           p("Staff Name lists are now dynamic from Contacts"),
           p("Progress Bar added to Active Members Over Time")
         )
