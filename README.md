@@ -29,11 +29,13 @@ The GOC plans to implement
 
 ## Dashboard
 
-The GOC Dashboard has 3 widgets, 48 reports, 8 plots, 10 table viewers, 1 technical figure, and 11 downloads.  
+The GOC Dashboard has 3 widgets, 48 reports, 8 plots, 10 table viewers, 1 technical figure, and 11 downloads. 
+
+![Screen shot of GOC dashboard with menu on left, 3 info boxes on the right, two graphs underneath the info boxes, and three more info boxes on the bottom](img/Dashboard-2023-04-23.png)
 
 Some highlights:
 
-* Members with staff assignments showing supports, progress notes and goals
+* Members with staff assignments showing attendance, supports, goals, and progress notes
 * Sign in sheets, attendance and outreach reports
 * Donations by year, campaign, top donors
 * Billing reports for grants
