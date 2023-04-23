@@ -2,6 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
+*.html
 src/*.html
 src/shiny/goc-dashboard/src/*.html
 src/*.csv

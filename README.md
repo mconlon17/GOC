@@ -27,54 +27,35 @@ The GOC plans to implement
 1. Education.  One record per "education" -- start/end with a specific education program.  Education providers in contacts.
 1. Group Events.  One record per event -- date/time/location/duration.  With associated members and staff.
 
-## Reports
+## Dashboard
 
-### Daily
+The GOC Dashboard has 3 widgets, 48 reports, 8 plots, 10 table viewers, 1 technical figure, and 11 downloads.  
 
-* Daily Attendance Lists -- Member, Staff/Volunteer, and Visitor sign-up sheets
-* Newly Absent Member List -- lists Members who have not attended for more than 90 days
-* Outreach List -- lists Members with date of last attendance for use in Outreach
-* Record tracking -- for each module, show new records added and records updated. For process monitoring
+Some highlights:
 
-### Weekly
-
-* Member Locations -- shows cities, states and zip codes for members.  Used in error checking
-* Supports -- lists supports by staff, member, and type for tracking support data entry
-
-### Monthly or so
-
-* Billing List -- used to produce the monthly invoice to LSF
-* Board report -- bi-monthly report to the board
-* Donations by Campaign -- shows donations to each campaign since 2017
-* Last attendance in month -- used in Supplemental Employment billing of LSF
-* Monthly attendance summary -- used by management to track attendance at work ordered day, social, and holiday events
-
-
-### Quarterly or so
-
-* Attendance plot -- shows GOC attendance since 2008
-
-### Adhoc
-
-* Campaign donor report -- run for the campaign as needed
-* Contact email addresses -- run as needed for bulk email
-* Contact missing data report -- shows missing data for contact for remediation
-* Member missing data report -- shows missing data for Members for remediation
-
-
-## Utility programs
-
-* Flourish Connection -- tests the Flourish connection showing status, and columns in tables GOC uses for reporting
-* Flourish Get -- basic getter type functions for returning data from a Flourish database and making it available to R
+* Members with staff assignments showing supports, progress notes and goals
+* Sign in sheets, attendance and outreach reports
+* Donations by year, campaign, top donors
+* Billing reports for grants
+* Payroll reports for staff
+* Productivity reports
+* Board reporting
+* System information including database record counts, and field usage by table
 
 ## To Do (software only)
 
-1. Complete initial github deployment
-1. Implement R Server batch jobs on Flourish Community instance
-    1. Implement keychain on R Server
-    1. Synch Members and Contacts
-    1. Btach jobs to pre-calc common data requests, such as 90 day attendance, active members, current staff
+1. Implement R Server batch jobs on Form Communities instance
+    1. Implement https on R server
+    1. Implement keychain dependencies on R Server
+    1. Implement keychain on R server
+    1. Batch job to synch Members and Contacts (requires keychain and https)
+    1. Batch jobs to pre-calculate and speed-up common data requests, such as 90 day attendance, active members, current staff
 1. Move dashboard from commercial hosting to Form Communities hosting
+    1. Implement https on Shiny Server
+    1. Implement authentication on Shiny server
+    1. Implement rsconnect on Shiny Server
+    1. Move and test dashboard on Shiny Server (requires https, authentication, and rsconnect)
+    1. End account on commercial server
 1. Implement data caching in dashboard to improve response time
 1. Implement goctools library to provide access to required code for both local and dashboard use
 1. Improve code organization and consistency
