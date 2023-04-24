@@ -48,9 +48,7 @@ Some highlights:
 
 1. Implement R Server batch jobs on Form Communities instance
     1. Implement https on R server
-    1. Implement keychain dependencies on R Server
-    1. Implement keychain on R server
-    1. Batch job to synch Members and Contacts (requires keychain and https)
+    1. Batch job to synch Members and Contacts (requires https)
     1. Batch jobs to pre-calculate and speed-up common data requests, such as 90 day attendance, active members, current staff
 1. Move dashboard from commercial hosting to Form Communities hosting
     1. Implement https on Shiny Server
