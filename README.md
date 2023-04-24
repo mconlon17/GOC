@@ -60,6 +60,7 @@ Some highlights:
     1. End account on commercial server
 1. Implement data caching in dashboard to improve response time
 1. Implement goctools library to provide access to required code for both local and dashboard use
+1. Provide a mechanism for staff update of news boxes, or remove them
 1. Improve code organization and consistency
     1. Remove dependency on .RData, all code should be in goctools
     1. Improve older reports to use current coding paradigms
