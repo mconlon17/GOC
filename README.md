@@ -12,13 +12,13 @@ The GOC has implemented 10 Flourish modules:
 1. Members. Just Members.  Prospects are in Contacts.
 1. Contacts. All Members are contacts, but not all contacts are Members.  Contacts include donors, volunteers, community partners, staff, and many others.
 1. Gifts. All gifts, including in-kind.
-1. Attendance.  All attendnace, including staff, visitors, and volunteers.
+1. Attendance.  All attendance, including staff, visitors, and volunteers.
 1. Outreach.  Outreach to Members.
-1. Employment.  One record per "employment" -- start/end with a specific employer.  Employers in Contacts.
+1. Employment.  One record per "employment" -- start/end with a specific employer.  Employers are in Contacts.
 1. Supports.  One record per support -- Members and a Staff Member participating in a clubhouse activity.
 1. Goals and Plans.  One record per goal with associated plan.  Members have multiple goals.
 1. Progress Notes.  One progress note per month per goal.
-1. Users.  The users of the sstem, including accesss roles.
+1. Users.  The users of the system, including access roles.
 
 ### Future Modules
 
