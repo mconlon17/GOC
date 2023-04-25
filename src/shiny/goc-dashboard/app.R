@@ -187,8 +187,8 @@ ui <- dashboardPage(
         
         infoBox("Today", Sys.Date(), icon = icon("calendar"), color = "fuchsia", fill = TRUE),
         infoBox("Active Members", value=uiOutput("active_members"), icon = icon("users"), color = "green", fill = TRUE),
-        box(title = "Amazing Give Results 4/24", background = "navy", width = 4,
-          p("$35,851 at 5:30 pm. See",a("GOC at the Amazing Give",href="https://www.theamazinggive.org/organizations/gainesville-opportunity-center"))),
+        box(title = "Bike Day 5/13", background = "navy", width = 4,
+          p("At First Magnitude. See ",a("2nd Annual Bike Day",href="https://goclubhouse.org/2nd-annual-goc-bike-day/"))),
         
         box(title = "Membership Growth", status = "warning", solidHeader = TRUE, collapsible = TRUE, plotOutput("important_plot", height = 250)),
         box(title = "Gift Growth", status = "warning", solidHeader = TRUE, collapsible = TRUE, plotOutput("another_plot", height = 250)),
