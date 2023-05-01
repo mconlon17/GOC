@@ -22,7 +22,7 @@ The GOC has implemented 10 Flourish modules:
 
 ## Dashboard
 
-The GOC Dashboard has 3 widgets, 48 reports, 8 plots, 10 table viewers, 1 technical figure, and 11 downloads. 
+The GOC Dashboard has 3 widgets, 49 reports, 8 plots, 10 table viewers, 1 technical figure, and 11 downloads. 
 
 ![Screen shot of GOC dashboard with menu on left, 3 info boxes on the right, two graphs underneath the info boxes, and three more info boxes on the bottom](img/Dashboard-2023-04-23.png)
 
