@@ -1,0 +1,27 @@
+---
+title: Gifts to Campaign
+output:
+    html_document:
+        css: "../styles/styles.css"
+params:
+    gift_campaign: "2022 Amazing Give"
+---
+```{r setup,echo=F,message=F,warning=F}
+source("setup.R")
+```
+```{r gifts}
+
+campaigns <- get.campaign.names()
+gift_campaign <- campaigns$key[which(campaigns$value == params$gift_campaign)]
+
+gifts <- get.gifts() %>%
+  filter(flo_gift_campaign == gift_campaign) %>%
+  group_by(contact_2_id) %>%
+  summarize(Amount = sum(flo_gift_amount)) %>%
+  arrange(desc(Amount)) %>%
+  left_join(get.contacts()[,c("id","contact2_full_name")], by=c("contact_2_id"="id")) %>%
+  select(Donor = contact2_full_name, Amount)
+
+ft <- goc.table(gifts,paste0(nrow(gifts), " Donors to ", params$gift_campaign))
+ft
+```

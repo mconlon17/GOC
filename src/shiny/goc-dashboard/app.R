@@ -98,6 +98,10 @@ ui <- dashboardPage(
         menuSubItem("Person Contact Info", tabName = "person-contact-info"),
         menuSubItem("Gifts by Campaign", tabName = "gifts-by-campaign"),
         menuSubItem("Gift Amounts by Campaign", tabName = "gift-amounts-by-campaign"),
+        selectInput(
+          "gift_campaign", "Campaign", get.campaign.names()$value
+        ),
+        menuSubItem("Campaign Donors", tabName = "campaign-donors"),
         menuItem(
           "Contact and Gift Graphics",
           icon = icon("chart-line"),
@@ -119,10 +123,10 @@ ui <- dashboardPage(
         menuSubItem("Clubhouse Billing List", tabName = "billing-list"),
         menuSubItem("Supported Employment Billing List", tabName = "supported-employment-billing-list"),
         menuSubItem("Last Attendance in Month", tabName = "last-attendance-in-month-list"),
-        menuSubItem("Staff Time Report", tabName = "staff-time-report"),
         selectInput(
           "staff_name", "Staff Member", get.staff.names()
-        )
+        ),
+        menuSubItem("Staff Time Report", tabName = "staff-time-report")
       ),
 
       menuItem(
@@ -200,6 +204,8 @@ ui <- dashboardPage(
           title = "Flourish News",
           background = "navy",
           width = 4,
+          p("Campaign selector added to Contacts and Gifts to support campaign-specific reports"),
+          p("Campaign Donor report added"),
           p("Billing List handles Flourish Time recording change"),
           p("Check All Members includes name check for finding duplicates")
         )
@@ -252,6 +258,7 @@ ui <- dashboardPage(
       tabItem(tabName = "person-contact-info",                         uiOutput("html_person_contact_info")),
       tabItem(tabName = "gifts-by-campaign",                           uiOutput("html_gifts_by_campaign")),
       tabItem(tabName = "gift-amounts-by-campaign",                    uiOutput("html_gift_amounts_by_campaign")),
+      tabItem(tabName = "campaign-donors",                             uiOutput("html_campaign_donors")),
       tabItem(tabName = "gifts-by-year",                               plotOutput("plot_gifts_by_year")),
       tabItem(tabName = "total-raised-by-payment-method",              plotOutput("plot_total_raised_by_payment_method")),
       tabItem(tabName = "number-of-gifts-vs-total-raised-by-campaign", plotOutput("plot_number_of_gifts_vs_total_raised_by_campaign")),
@@ -504,6 +511,10 @@ server <- function(input, output) {
   
   output$html_gift_amounts_by_campaign <- renderUI({
     HTML(markdown::markdownToHTML(render("src/Gift-Amounts-By-Campaign.Rmd", quiet = TRUE), fragment.only = TRUE))
+  })
+  
+  output$html_campaign_donors <- renderUI({
+    HTML(markdown::markdownToHTML(render("src/Campaign-Donors.Rmd", params = list(gift_campaign = input$gift_campaign), quiet = TRUE), fragment.only = TRUE))
   })
 
   output$plot_gifts_by_year <- renderPlot({
