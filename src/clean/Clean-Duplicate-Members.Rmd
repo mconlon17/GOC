@@ -1,0 +1,156 @@
+---
+title: "Clean Duplicate Members"
+output:
+  html_document:
+    css : "../../styles/styles.css"
+---
+
+```{r setup,echo=F,message=F,warning=F}
+source("../setup.r")
+```
+```{r contacts}
+
+members <- get.members(include.deleted=T)
+
+tab <- members %>%
+  filter(deleted == 0) %>%
+  group_by(first_name, last_name) %>%
+  tally() %>%
+  arrange(desc(n))
+
+ft <- goc.table(tab, "Potential Duplicate Members")
+ft
+
+tab <- members %>%
+  filter(startsWith(first_name, "Patri")) %>%
+  select(first_name, last_name, deleted, id, contact_id_c)
+ft <- goc.table(tab)
+ft
+# 
+# old_uuid <- c(
+# "53a00229-7d2c-4261-864e-7a1f636c0d49", "e16c1beb-6843-4080-9e53-b0ce68527739", "3b1f40ad-a30c-41e2-aca1-d77379cf3684", "4a436df2-df27-4917-9095-ad75dbb30bc8")
+# 
+# new_uuid <- c(
+# "53a00229-7d2c-4261-864e-7a1f636c0d49", "e16c1beb-6843-4080-9e53-b0ce68527739", "3b1f40ad-a30c-41e2-aca1-d77379cf3684", "4a436df2-df27-4917-9095-ad75dbb30bc8")
+# 
+# member.translate.id <- data.frame(old_uuid = old_uuid, new_uuid = new_uuid)
+# 
+# member.translate.id <- member.translate.id %>%
+#   mutate(date_modified=rep(now(),n()),modified_user_id=rep("4cde6014-5735-b6a8-2975-63e1844134be",n()))
+# 
+# member.translate.id
+
+```
+``` {r update-flourish}
+# Make a database connection to Flourish
+
+# con <- flourish.connection()
+# 
+# # Allow Tables to be loaded from R
+# 
+# dbSendQuery(con, "SET GLOBAL local_infile = true;")
+# 
+# # dbSendQuery(con, 'DROP TABLE temp_contact_translate_id;')
+# dbWriteTable(con, value = contact.translate.id, name = 'temp_contact_translate_id', append = F, row.names = F)
+# 
+# # Update Members associated with contacts
+# 
+# dbSendQuery(con, "UPDATE contacts
+#                      INNER JOIN temp_contact_translate_id ON
+#                          contacts.contact_id_c = temp_contact_translate_id.old_uuid
+#                      SET contacts.date_modified = temp_contact_translate_id.date_modified,
+#                          contacts.modified_user_id = temp_contact_translate_id.modified_user_id,
+#                          contacts.contact_id_c = temp_contact_translate_id.new_uuid;")
+# 
+# # Update Members associated with referring agencies
+# 
+# dbSendQuery(con, "UPDATE contacts
+#                      INNER JOIN temp_contact_translate_id ON
+#                          contacts.referrer_id_c = temp_contact_translate_id.old_uuid
+#                      SET contacts.date_modified = temp_contact_translate_id.date_modified,
+#                          contacts.modified_user_id = temp_contact_translate_id.modified_user_id,
+#                          contacts.referrer_id_c = temp_contact_translate_id.new_uuid;")
+# 
+# # Update Supports associated with staff
+# 
+# dbSendQuery(con, "UPDATE flo_supports
+#                      INNER JOIN temp_contact_translate_id ON
+#                          flo_supports.sa_contacts_2_id = temp_contact_translate_id.old_uuid
+#                      SET flo_supports.date_modified = temp_contact_translate_id.date_modified,
+#                          flo_supports.modified_user_id = temp_contact_translate_id.modified_user_id,
+#                          flo_supports.sa_contacts_2_id = temp_contact_translate_id.new_uuid;")
+# 
+# # Update Goals and Plans associated with staff
+# 
+# dbSendQuery(con, "UPDATE sa_goals
+#                      INNER JOIN temp_contact_translate_id ON
+#                          sa_goals.contact_2_id = temp_contact_translate_id.old_uuid
+#                      SET sa_goals.date_modified = temp_contact_translate_id.date_modified,
+#                          sa_goals.modified_user_id = temp_contact_translate_id.modified_user_id,
+#                          sa_goals.contact_2_id = temp_contact_translate_id.new_uuid;")
+# 
+# # Update Progress Notes associated with staff
+# 
+# dbSendQuery(con, "UPDATE flo_progress_notes
+#                      INNER JOIN temp_contact_translate_id ON
+#                          flo_progress_notes.contact_2_id = temp_contact_translate_id.old_uuid
+#                      SET flo_progress_notes.date_modified = temp_contact_translate_id.date_modified,
+#                          flo_progress_notes.modified_user_id = temp_contact_translate_id.modified_user_id,
+#                          flo_progress_notes.contact_2_id = temp_contact_translate_id.new_uuid;")
+# 
+# # Note: Employment associated with employers (c2_employer_id)
+# 
+# dbSendQuery(con, "UPDATE sa_employment
+#                      INNER JOIN temp_contact_translate_id ON
+#                          sa_employment.employer_id = temp_contact_translate_id.old_uuid
+#                      SET sa_employment.date_modified = temp_contact_translate_id.date_modified,
+#                          sa_employment.modified_user_id = temp_contact_translate_id.modified_user_id,
+#                          sa_employment.employer_id = temp_contact_translate_id.new_uuid;")
+# 
+# # Update Outreach associated with staff (person1_c)
+# 
+# dbSendQuery(con, "UPDATE sa_flourish_reach_out
+#                      INNER JOIN temp_contact_translate_id ON
+#                          sa_flourish_reach_out.person1_c = temp_contact_translate_id.old_uuid
+#                      SET sa_flourish_reach_out.date_modified = temp_contact_translate_id.date_modified,
+#                          sa_flourish_reach_out.modified_user_id = temp_contact_translate_id.modified_user_id,
+#                          sa_flourish_reach_out.person1_c = temp_contact_translate_id.new_uuid;")
+# 
+# # Update Outreach associated with staff (person2_c)
+# 
+# dbSendQuery(con, "UPDATE sa_flourish_reach_out
+#                      INNER JOIN temp_contact_translate_id ON
+#                          sa_flourish_reach_out.person2_c = temp_contact_translate_id.old_uuid
+#                      SET sa_flourish_reach_out.date_modified = temp_contact_translate_id.date_modified,
+#                          sa_flourish_reach_out.modified_user_id = temp_contact_translate_id.modified_user_id,
+#                          sa_flourish_reach_out.person2_c = temp_contact_translate_id.new_uuid;")
+# 
+# # Update Attendance associated with contacts
+# 
+# dbSendQuery(con, "UPDATE sa_flourish_daily_attendance
+#                      INNER JOIN temp_contact_translate_id ON
+#                          sa_flourish_daily_attendance.contact_2_id = temp_contact_translate_id.old_uuid
+#                      SET sa_flourish_daily_attendance.date_modified = temp_contact_translate_id.date_modified,
+#                          sa_flourish_daily_attendance.modified_user_id = temp_contact_translate_id.modified_user_id,
+#                          sa_flourish_daily_attendance.contact_2_id = temp_contact_translate_id.new_uuid;")
+# 
+# # Update Gifts associated with donors
+# 
+# dbSendQuery(con, "UPDATE flo_gifts
+#                      INNER JOIN temp_contact_translate_id ON
+#                          flo_gifts.contact_2_id = temp_contact_translate_id.old_uuid
+#                      SET flo_gifts.date_modified = temp_contact_translate_id.date_modified,
+#                          flo_gifts.modified_user_id = temp_contact_translate_id.modified_user_id,
+#                          flo_gifts.contact_2_id = temp_contact_translate_id.new_uuid;")
+# 
+# # Update Email Relationships associated with contacts
+# 
+# dbSendQuery(con, "UPDATE email_addr_bean_rel
+#                      INNER JOIN temp_contact_translate_id ON
+#                          email_addr_bean_rel.bean_id = temp_contact_translate_id.old_uuid
+#                      SET email_addr_bean_rel.date_modified = temp_contact_translate_id.date_modified,
+#                          email_addr_bean_rel.bean_id = temp_contact_translate_id.new_uuid;")
+# 
+# dbSendQuery(con, 'DROP TABLE temp_contact_translate_id;')
+# dbDisconnect(con)
+```

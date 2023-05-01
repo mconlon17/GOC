@@ -9,11 +9,45 @@ params:
 ```{r setup,echo=FALSE,message=FALSE,warning=FALSE}
 source("setup.R")
 ```
-This report is not complete.  The Members table has over 80 pieces of information for each member.  Only several are tabulated below.  Much will be dded to Check Members as we go forward.
 ```{r check-members}
 members <- get.members() %>%
   mutate(Name = paste0(last_name, ", ", first_name)) %>%
   arrange(Name)
+```
+## Check Member Names for Duplicates
+The report belows shows members whose names are "close" to the names of other members.  "Close" is defined by Levenshtein distance, the number of edits required to turn one name into another.  This method was proposed by Ryan Poindexter-Jones of the GOC.  For more information on Levenshtein distance, see [Wikipedia](https://en.wikipedia.org/wiki/Levenshtein_distance).
+
+Examples:
+
+1. If two member records have exactly the name member name (last name, first name), the distance is 0. This often indicates a duplicate, but it is possible that we might have two members with exactly the same name.
+1. Hedges, Amber and Hodges, Amber have a distance of 1.  Just one letter must be changed for one name to be the same as the other.  This could be a typographical error, or these two records might each be correct.
+1. Paiitez, Rafael and Plaitez, Rafael have a distance of two.  But this is likely a duplicate as a result of typing an i instead of an l and switching the second letter and the third.
+
+Only distances less than 4 are included in this report. It appears that distances of 4 or greater between member names do not represent errors to be corrected.
+
+This report is useful for finding *potential* duplicates, but perhaps should not be automated further -- even exact name matches require inspection and decision to determine if they represent duplicates to be merged.
+```{r stringdist}
+
+X <- as.matrix(stringdistmatrix(members$Name))
+diag(X) <- Inf 
+rownames(X) <- members$Name
+colnames(X) <- members$Name
+
+result <- t(sapply(seq(nrow(X)), function(i) {
+  j <- which.min(X[i,])
+  c(paste(rownames(X)[i], colnames(X)[j], sep=' / '), X[i,j])
+}))
+colnames(result) <- c("This Member name is close to that Member name", "How close")
+result <- as.data.frame(result) %>%
+    mutate(`How close` = as.numeric(`How close`)) %>%
+    filter(`How close` <= 3) %>%
+    arrange(`How close`, `This Member name is close to that Member name`)
+ft <- goc.table(result, "Closeness of member names")
+ft
+```
+## Member Lists and Tables
+The lists and tables below may help identify issues related to correctness and completeness of Member data.
+```{r tables}
 
 tab <- members %>%
   select(Name, flo_primary_phone, primary_address_street, primary_address_city, primary_address_state, primary_address_postalcode)

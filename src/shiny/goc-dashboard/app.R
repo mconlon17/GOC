@@ -11,6 +11,7 @@ library(knitr)
 library(uuid)
 library(flextable)
 library(officer)
+library(stringdist)
 
 dbHeader <- dashboardHeader(title = "GOC Dashboard")
 
@@ -199,9 +200,8 @@ ui <- dashboardPage(
           title = "Flourish News",
           background = "navy",
           width = 4,
-          p("Active Members Assigned to Staff now dynamic from Members"),
-          p("Staff Name lists are now dynamic from Contacts"),
-          p("Progress Bar added to Active Members Over Time")
+          p("Billing List handles Flourish Time recording change"),
+          p("Check All Members includes name check for finding duplicates")
         )
       ),
 

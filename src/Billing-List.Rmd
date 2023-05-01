@@ -4,7 +4,7 @@ output:
   html_document:
       css: "../styles/styles.css"
 params:
-  date: !r Sys.Date()-6
+  date: !r Sys.Date()
 ---
 ```{r setup,echo=FALSE,message=F,warning=F}
 source("setup.R")
@@ -40,11 +40,11 @@ member.attendance <- get.attendance(days=ndays) %>%
 # ft <- goc.table(member.attendance)
 # ft
 
-staff.attendance <- get.attendance() %>%
+staff.attendance <- get.attendance(days=ndays) %>%
     filter(as_date(da_date_of_attendance) %within% (start_date %--% end_date)) %>%
     inner_join(staff,by=c("contact_2_id"="id")) %>%
-    mutate(StaffPresent = da_time_in %--% da_time_out) %>%
-    select(Name,contact_2_id,da_date_of_attendance,StaffPresent) %>%
+    mutate(StaffPresent = as_datetime(paste0(da_date_of_attendance, " ", da_time_in)) %--% as_datetime(paste0(da_date_of_attendance, " ", da_time_out))) %>%
+    select(Name,contact_2_id,da_date_of_attendance,StaffPresent, da_time_in, da_time_out) %>%
     arrange(Name, StaffPresent)
 
 # ft <- goc.table(staff.attendance)
@@ -52,7 +52,7 @@ staff.attendance <- get.attendance() %>%
 
 member.intervals <- member.attendance %>%
   group_by(da_date_of_attendance) %>%
-  summarise(MembersPresent = min(da_time_in, na.rm=T) %--% max(da_time_out, na.rm=T))
+  summarise(MembersPresent = min(as_datetime(paste0(da_date_of_attendance, " ", da_time_in)), na.rm=T) %--% max(as_datetime(paste0(da_date_of_attendance, " ", da_time_out)), na.rm=T))
 
 # ft <- goc.table(member.intervals)
 # ft
