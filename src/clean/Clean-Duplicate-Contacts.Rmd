@@ -17,15 +17,14 @@ tab <- contacts %>%
   tally() %>%
   arrange(desc(n)) %>%
   filter(n > 1) %>%
-  filter(!last_name == "Schreiber") %>%
-  filter(!last_name == "Lowry") %>%
-  filter(!last_name == "Smith")
+  filter(first_name != "Joseph" | last_name != "Lowry") %>%   # Two Joseph Lowrys is correct
+  filter(first_name != "Luis"   | last_name != "Cintado")     # Two Luis Cintado is correct
 
 ft <- goc.table(tab, "Contacts")
 ft
 
 tab <- contacts %>%
-  filter(startsWith(first_name, "Patri")) %>%
+  filter(startsWith(first_name, "Sharo")) %>%
   select(first_name, last_name, deleted, id, c2_primary_phone)
 ft <- goc.table(tab)
 ft
