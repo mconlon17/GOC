@@ -205,6 +205,7 @@ ui <- dashboardPage(
           title = "Flourish News",
           background = "navy",
           width = 4,
+          p("Monthly Attendance Summary improved"),
           p("Attendance Checklist repaired"),
           p("62 Contacts merged")
         )

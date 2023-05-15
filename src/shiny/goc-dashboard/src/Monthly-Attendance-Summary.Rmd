@@ -25,6 +25,7 @@ contacts <- get.contacts() %>%
 
 summary <- get.attendance(days=65) %>%
   filter(as_date(da_date_of_attendance) %within% (start_date %--% end_date)) %>%
+  filter(da_total_hours < 24) %>%
   inner_join(contacts, by = c("contact_2_id" = "id")) %>%
   mutate(RowWorkDayHrs = ifelse(!(da_date_of_attendance %in% holidays) &
     (wday(da_date_of_attendance) > 1 &
