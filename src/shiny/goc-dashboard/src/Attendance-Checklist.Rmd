@@ -4,27 +4,32 @@ output:
   html_document:
       css: "../styles/styles.css"
 params:
-  date: !r Sys.Date()-2
+  date: !r Sys.Date()
 ---
 ```{r setup,echo=FALSE,message=FALSE}
 source("setup.R")
 ```
 ```{r attendance}
-contacts <- get.contacts()
-
-ndays <- as.integer(as_date(Sys.Date())-as_date(params$date)) +1
-
-tab <- get.attendance(days = ndays) %>%
-  filter(da_date_of_attendance == params$date) %>%
-  left_join(contacts, by = c("contact_2_id" = "id")) %>%
-  mutate(Name = paste(last_name, first_name, sep = ", ")) %>%
-  select(Name, da_time_in, da_time_out) %>%
-  mutate(`Time In` = format(as.POSIXct(da_time_in), "%I:%M %p")) %>%
-  mutate(`Time Out` = format(as.POSIXct(da_time_out), "%I:%M %p")) %>%
-  mutate(Hours = format(round(as.numeric(difftime(da_time_out, da_time_in, unit = "hours")), 2), nsmall = 2)) %>%
-  select(Name, `Time In`, `Time Out`, Hours) %>%
-  full_join(data.frame(Name = get.staff.names())) %>%
-  arrange(Name)
+    contacts <- get.contacts()
+    
+    ndays <- as.integer(lubridate::as_date(Sys.Date()) - lubridate::as_date(params$date)) + 1
+    
+    tab <- get.attendance(days = ndays) %>%
+        dplyr::filter(da_date_of_attendance == params$date) %>%
+        dplyr::left_join(contacts, by = c("contact_2_id" = "id")) %>%
+        dplyr::mutate(Name = paste(last_name, first_name, sep = ", ")) %>%
+        dplyr::mutate(da_time_in =lubridate::as_datetime(ifelse(is.na(da_time_in),  NA, 
+                                              lubridate::as_datetime(paste0(da_date_of_attendance, " ", da_time_in))))) %>%
+        dplyr::mutate(da_time_out=lubridate::as_datetime(ifelse(is.na(da_time_out), NA, 
+                                              lubridate::as_datetime(paste0(da_date_of_attendance, " ", da_time_out))))) %>%
+        dplyr::mutate(`Time In` = format(da_time_in, "%I:%M %p")) %>%
+        dplyr::mutate(`Time Out` = format(da_time_out, "%I:%M %p")) %>%
+        dplyr::mutate(Hours = ifelse(is.na(da_time_out) | is.na(da_time_in) ," ",
+                              format(round(as.numeric(difftime(as.POSIXct(da_time_out), 
+                                                               as.POSIXct(da_time_in), units = "hours")), 2), nsmall = 2))) %>%
+        dplyr::select(Name, `Time In`, `Time Out`, Hours) %>%
+        dplyr::full_join(data.frame(Name = get.staff.names()), by="Name") %>%
+        dplyr::arrange(Name)
 
 
 ft <- goc.table(tab, paste("Checklist for", params$date))

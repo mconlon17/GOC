@@ -192,8 +192,9 @@ ui <- dashboardPage(
         
         infoBox("Today", Sys.Date(), icon = icon("calendar"), color = "fuchsia", fill = TRUE),
         infoBox("Active Members", value=uiOutput("active_members"), icon = icon("users"), color = "green", fill = TRUE),
-        box(title = "Bike Day 5/13", background = "navy", width = 4,
-          p("At First Magnitude. See ",a("2nd Annual Bike Day",href="https://goclubhouse.org/2nd-annual-goc-bike-day/"))),
+        box(title = "Your Message Title Here", background = "navy", width = 4,
+          p("Your message text here")
+        ),
         
         box(title = "Membership Growth", status = "warning", solidHeader = TRUE, collapsible = TRUE, plotOutput("important_plot", height = 250)),
         box(title = "Gift Growth", status = "warning", solidHeader = TRUE, collapsible = TRUE, plotOutput("another_plot", height = 250)),
@@ -204,10 +205,8 @@ ui <- dashboardPage(
           title = "Flourish News",
           background = "navy",
           width = 4,
-          p("Campaign selector added to Contacts and Gifts to support campaign-specific reports"),
-          p("Campaign Donor report added"),
-          p("Billing List handles Flourish Time recording change"),
-          p("Check All Members includes name check for finding duplicates")
+          p("Attendance Checklist repaired"),
+          p("62 Contacts merged")
         )
       ),
 
